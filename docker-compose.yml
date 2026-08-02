@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: book_helper_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bookhelper}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bookhelper}
+      POSTGRES_DB: ${POSTGRES_DB:-book_helper}
+      # PGDATA apunta a un subdirectorio a propósito: con bind mounts en Windows
+      # Postgres falla al arrancar si escribe en la raíz del mount ("data directory
+      # has invalid permissions"). Con un subdirectorio lo crea él y toma el owner
+      # correcto. No cambiar sin probar.
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bookhelper} -d ${POSTGRES_DB:-book_helper}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Cliente web de Postgres para inspeccionar datos a mano. Opcional:
+  #   docker compose up -d postgres     -> solo la BD
+  #   docker compose up -d              -> BD + adminer
+  # Puerto 8081 porque el 8080 puede estar ocupado.
+  adminer:
+    image: adminer:latest
+    container_name: book_helper_adminer
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy

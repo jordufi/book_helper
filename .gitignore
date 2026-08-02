@@ -1,0 +1,33 @@
+# --- Postgres volume (datos locales, nunca al repo) ---
+/postgres-data/*
+!/postgres-data/.gitkeep
+
+# --- Fotos de personajes subidas por el usuario ---
+/uploads/*
+!/uploads/.gitkeep
+
+# --- Node ---
+node_modules/
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# --- Entorno ---
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# --- Logs ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# --- Editor / OS ---
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
