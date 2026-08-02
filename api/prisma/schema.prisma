@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CharacterRole {
+  PROTAGONIST
+  ANTAGONIST
+  SECONDARY
+  EXTRA
+}
+
+model Book {
+  id        String   @id @default(uuid())
+  title     String
+  author    String?
+  synopsis  String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  characters Character[]
+
+  @@map("books")
+}
+
+model Character {
+  id     String @id @default(uuid())
+  bookId String @map("book_id")
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  name String
+  role CharacterRole @default(SECONDARY)
+
+  /// Texto libre a propósito: admite "unos cuarenta" o "inmortal".
+  age String?
+
+  /// Ruta relativa servida por la API, p.ej. /uploads/characters/<uuid>.webp
+  photoUrl String? @map("photo_url")
+
+  physicalDescription String? @map("physical_description")
+  personality         String?
+
+  /// Lo que le ocurrió ANTES de empezar el libro.
+  backstory String?
+
+  /// Lo que le ocurre DURANTE el libro (sucesos externos).
+  personalPlot String? @map("personal_plot")
+
+  /// Cómo cambia por dentro. Distinto de personalPlot: un personaje puede
+  /// pasar por mucho sin transformarse. El detalle va en arcStages.
+  arcSummary String? @map("arc_summary")
+
+  notes String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  arcStages     CharacterArcStage[]
+  relationships CharacterRelationship[] @relation("CharacterRelationshipSubject")
+  relatedTo     CharacterRelationship[] @relation("CharacterRelationshipObject")
+
+  @@index([bookId])
+  @@map("characters")
+}
+
+model CharacterArcStage {
+  id          String    @id @default(uuid())
+  characterId String    @map("character_id")
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  position    Int
+  title       String
+  description String?
+
+  @@index([characterId, position])
+  @@map("character_arc_stages")
+}
+
+/// Dirigida y no recíproca a propósito: A puede ver a B como "mentor"
+/// mientras B ve a A como "estorbo". Esa asimetría es parte del diseño.
+model CharacterRelationship {
+  id          String    @id @default(uuid())
+  characterId String    @map("character_id")
+  character   Character @relation("CharacterRelationshipSubject", fields: [characterId], references: [id], onDelete: Cascade)
+
+  relatedCharacterId String    @map("related_character_id")
+  relatedCharacter   Character @relation("CharacterRelationshipObject", fields: [relatedCharacterId], references: [id], onDelete: Cascade)
+
+  type        String
+  description String?
+
+  @@unique([characterId, relatedCharacterId, type])
+  @@index([characterId])
+  @@map("character_relationships")
+}
