@@ -1,11 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './client';
-import type { Book, Character, CharacterSummary } from '../types';
+import type {
+  Book,
+  Chapter,
+  ChapterPatch,
+  ChapterSummary,
+  Character,
+  CharacterSummary,
+  Plot,
+} from '../types';
 
 export const keys = {
   books: ['books'] as const,
   characters: (bookId: string) => ['books', bookId, 'characters'] as const,
   character: (id: string) => ['characters', id] as const,
+  chapters: (bookId: string) => ['books', bookId, 'chapters'] as const,
+  chapter: (id: string) => ['chapters', id] as const,
+  /** Sucesos y promesas comparten clave: se cargan y se invalidan juntos. */
+  plot: (bookId: string) => ['books', bookId, 'plot'] as const,
 };
 
 // --- Libros ----------------------------------------------------------------
@@ -115,6 +127,171 @@ export function useDeleteCharacter(bookId: string | null) {
     onSuccess: (_data, id) => {
       qc.removeQueries({ queryKey: keys.character(id) });
       if (bookId) qc.invalidateQueries({ queryKey: keys.characters(bookId) });
+    },
+  });
+}
+
+// --- Capítulos ---------------------------------------------------------------
+
+export const useChapters = (bookId: string | null) =>
+  useQuery({
+    queryKey: keys.chapters(bookId ?? ''),
+    queryFn: () => api.get<ChapterSummary[]>(`/api/books/${bookId}/chapters`),
+    enabled: Boolean(bookId),
+  });
+
+export const useChapter = (id: string | null) =>
+  useQuery({
+    queryKey: keys.chapter(id ?? ''),
+    queryFn: () => api.get<Chapter>(`/api/chapters/${id}`),
+    enabled: Boolean(id),
+  });
+
+/** Calco de useCharacterMutation: la API devuelve el capítulo completo recargado. */
+function useChapterMutation<TArgs>(
+  mutationFn: (args: TArgs) => Promise<Chapter>,
+  bookId: string | null,
+) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: (chapter) => {
+      qc.setQueryData(keys.chapter(chapter.id), chapter);
+      if (bookId) qc.invalidateQueries({ queryKey: keys.chapters(bookId) });
+    },
+  });
+}
+
+export const useCreateChapter = (bookId: string | null) =>
+  useChapterMutation(
+    (body: { title: string; synopsis?: string | null; notes?: string | null }) =>
+      api.post<Chapter>(`/api/books/${bookId}/chapters`, body),
+    bookId,
+  );
+
+export const useUpdateChapter = (bookId: string | null) =>
+  useChapterMutation(
+    ({ id, ...body }: { id: string } & ChapterPatch) => api.patch<Chapter>(`/api/chapters/${id}`, body),
+    bookId,
+  );
+
+export const useSaveChapterCast = (bookId: string | null) =>
+  useChapterMutation(
+    ({ id, cast }: { id: string; cast: { characterId: string; action: string | null }[] }) =>
+      api.put<Chapter>(`/api/chapters/${id}/cast`, { cast }),
+    bookId,
+  );
+
+export function useReorderChapters(bookId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      api.put<ChapterSummary[]>(`/api/books/${bookId}/chapters/order`, { ids }),
+    onSuccess: (list) => {
+      if (bookId) qc.setQueryData(keys.chapters(bookId), list);
+      // Las fichas en caché llevan `position`: tras reordenar están obsoletas.
+      qc.invalidateQueries({ queryKey: ['chapters'] });
+    },
+  });
+}
+
+export function useDeleteChapter(bookId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<void>(`/api/chapters/${id}`),
+    onSuccess: (_data, id) => {
+      qc.removeQueries({ queryKey: keys.chapter(id) });
+      if (bookId) qc.invalidateQueries({ queryKey: keys.chapters(bookId) });
+    },
+  });
+}
+
+// --- Trama ---------------------------------------------------------------------
+
+export const usePlot = (bookId: string | null) =>
+  useQuery({
+    queryKey: keys.plot(bookId ?? ''),
+    queryFn: () => api.get<Plot>(`/api/books/${bookId}/plot`),
+    enabled: Boolean(bookId),
+  });
+
+/**
+ * Toda mutación de trama devuelve { events, promises } recargado: borrar o
+ * mover un suceso puede arrastrar promesas o dejarlas pendientes, así que
+ * devolver sólo el elemento tocado no permite reconstruir la vista.
+ */
+function usePlotMutation<TArgs>(mutationFn: (args: TArgs) => Promise<Plot>, bookId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: (plot) => {
+      if (bookId) qc.setQueryData(keys.plot(bookId), plot);
+    },
+  });
+}
+
+export const useCreatePlotEvent = (bookId: string | null) =>
+  usePlotMutation(
+    (body: { title: string; description: string | null }) =>
+      api.post<Plot>(`/api/books/${bookId}/plot/events`, body),
+    bookId,
+  );
+
+export const useUpdatePlotEvent = (bookId: string | null) =>
+  usePlotMutation(
+    ({ id, ...body }: { id: string; title?: string; description?: string | null }) =>
+      api.patch<Plot>(`/api/plot-events/${id}`, body),
+    bookId,
+  );
+
+export const useReorderPlotEvents = (bookId: string | null) =>
+  usePlotMutation(
+    (ids: string[]) => api.put<Plot>(`/api/books/${bookId}/plot/events/order`, { ids }),
+    bookId,
+  );
+
+export const useCreatePromise = (bookId: string | null) =>
+  usePlotMutation(
+    (body: {
+      title: string;
+      description: string | null;
+      setupEventId: string;
+      payoffEventId: string | null;
+    }) => api.post<Plot>(`/api/books/${bookId}/plot/promises`, body),
+    bookId,
+  );
+
+export const useUpdatePromise = (bookId: string | null) =>
+  usePlotMutation(
+    ({
+      id,
+      ...body
+    }: {
+      id: string;
+      title?: string;
+      description?: string | null;
+      setupEventId?: string;
+      payoffEventId?: string | null;
+    }) => api.patch<Plot>(`/api/plot-promises/${id}`, body),
+    bookId,
+  );
+
+export function useDeletePlotEvent(bookId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<void>(`/api/plot-events/${id}`),
+    onSuccess: () => {
+      if (bookId) qc.invalidateQueries({ queryKey: keys.plot(bookId) });
+    },
+  });
+}
+
+export function useDeletePromise(bookId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<void>(`/api/plot-promises/${id}`),
+    onSuccess: () => {
+      if (bookId) qc.invalidateQueries({ queryKey: keys.plot(bookId) });
     },
   });
 }

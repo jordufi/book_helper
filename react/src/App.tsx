@@ -2,8 +2,9 @@ import { BookSelector } from './components/BookSelector';
 import { ErrorBanner, Spinner } from './components/ui';
 import { TABS, TAB_LABELS, useRoute } from './lib/useRoute';
 import { useActiveBook } from './state/useActiveBook';
-import { PlaceholderTab } from './tabs/PlaceholderTab';
 import { CharactersTab } from './tabs/characters/CharactersTab';
+import { ChaptersTab } from './tabs/chapters/ChaptersTab';
+import { PlotTab } from './tabs/plot/PlotTab';
 
 export default function App() {
   const [route, navigate] = useRoute();
@@ -40,13 +41,17 @@ export default function App() {
         ) : route.tab === 'personajes' ? (
           <CharactersTab
             bookId={bookId}
-            characterId={route.characterId}
-            onSelect={(characterId) => navigate({ characterId })}
+            characterId={route.itemId}
+            onSelect={(itemId) => navigate({ itemId })}
           />
-        ) : route.tab === 'trama' ? (
-          <PlaceholderTab title="Trama" note="Esta sección aún no está implementada." />
+        ) : route.tab === 'capitulos' ? (
+          <ChaptersTab
+            bookId={bookId}
+            chapterId={route.itemId}
+            onSelect={(itemId) => navigate({ itemId })}
+          />
         ) : (
-          <PlaceholderTab title="Capítulos" note="Esta sección aún no está implementada." />
+          <PlotTab bookId={bookId} />
         )}
       </main>
     </div>

@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ApiError } from '../api/client';
 
 export function Avatar({
@@ -116,3 +116,34 @@ export function ErrorBanner({ error }: { error: unknown }) {
 export const Spinner = ({ label = 'Cargando…' }: { label?: string }) => (
   <div className="spinner">{label}</div>
 );
+
+/** Sección plegable de una ficha (personaje, capítulo…). */
+export function Section({
+  title,
+  children,
+  filled,
+  defaultOpen = true,
+}: {
+  title: string;
+  children: ReactNode;
+  filled?: boolean;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="section">
+      <button className="section-head" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span className="chev">▶</span>
+        {title}
+        {/* Punto verde: la sección tiene contenido. Permite ver de un vistazo
+            qué queda por rellenar con las secciones plegadas. */}
+        {filled && <span className="filled" aria-label="con contenido" />}
+      </button>
+      {open && <div className="section-body">{children}</div>}
+    </div>
+  );
+}
+
+/** Texto largo de una ficha, con el aviso habitual cuando está vacío. */
+export const Prose = ({ text }: { text: string | null }) =>
+  text ? <div className="prose">{text}</div> : <p className="empty-note">Sin rellenar.</p>;

@@ -135,17 +135,19 @@ input, textarea, select { font: inherit; color: inherit; }
 .row { display: flex; gap: 12px; }
 .row > * { flex: 1; }
 
-/* --- Personajes: maestro-detalle ----------------------------------------- */
+/* --- Maestro-detalle (Personajes, Capítulos) ------------------------------ */
 
-.characters-layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
+.master-detail { display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
 
 .grid-panel { display: flex; flex-direction: column; gap: 12px; }
 .grid-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .grid-count { color: var(--text-dim); font-size: 0.85rem; }
 
-.character-list { display: flex; flex-direction: column; gap: 6px; }
+/* --- Tarjetas de lista (genéricas) ----------------------------------------- */
 
-.character-card {
+.card-list { display: flex; flex-direction: column; gap: 6px; }
+
+.list-card {
   display: flex;
   gap: 10px;
   align-items: center;
@@ -157,8 +159,8 @@ input, textarea, select { font: inherit; color: inherit; }
   width: 100%;
   transition: background 0.12s;
 }
-.character-card:hover { background: var(--surface-2); }
-.character-card[aria-current='true'] { background: var(--accent-soft); border-color: var(--accent); }
+.list-card:hover { background: var(--surface-2); }
+.list-card[aria-current='true'] { background: var(--accent-soft); border-color: var(--accent); }
 
 .avatar {
   width: 44px; height: 44px;
@@ -174,9 +176,9 @@ input, textarea, select { font: inherit; color: inherit; }
 }
 .avatar-lg { width: 96px; height: 96px; font-size: 2rem; border-radius: var(--radius); }
 
-.character-card-body { min-width: 0; }
-.character-card-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.character-card-meta { font-size: 0.8rem; color: var(--text-dim); }
+.list-card-body  { min-width: 0; }
+.list-card-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-card-meta  { font-size: 0.8rem; color: var(--text-dim); }
 
 .badge {
   display: inline-block;
@@ -239,6 +241,71 @@ input, textarea, select { font: inherit; color: inherit; }
 .rel-body { flex: 1; min-width: 0; }
 .rel-type { font-size: 0.78rem; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
 
+/* --- Capítulos ------------------------------------------------------------- */
+
+.chapter-num { width: 28px; height: 28px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; }
+
+.chapter-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+.chapter-panel { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+/* Rótulo editable: parece texto hasta que lo tocas. */
+.panel-label {
+  border: 1px solid transparent;
+  background: none;
+  font-weight: 600;
+  padding: 4px 6px;
+  border-radius: var(--radius);
+  width: 100%;
+}
+.panel-label:hover, .panel-label:focus { border-color: var(--border); background: var(--surface); outline: none; }
+
+.chapter-text { min-height: 55vh; }
+.panel-meta { font-size: 0.78rem; color: var(--text-dim); text-align: right; }
+
+.chapter-panel-switch { display: none; } /* sólo móvil */
+
+/* Barra de guardado siempre alcanzable con dos textareas altos. */
+.save-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 0;
+  margin-top: 10px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+.badge-dirty { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+
+/* --- Trama ------------------------------------------------------------------ */
+
+.plot-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+
+.plot-side {
+  position: sticky;
+  top: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+.plot-side-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+
+.promise { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.promise:last-child { border-bottom: none; }
+.promise-title { font-weight: 600; }
+.promise-link { font-size: 0.8rem; color: var(--text-dim); }
+
+.badge-pending { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.badge-paid { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); border-color: transparent; }
+
+.event-promises { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.timeline-actions { display: flex; gap: 4px; margin-top: 4px; }
+
 /* --- Modal --------------------------------------------------------------- */
 
 .modal-backdrop {
@@ -271,11 +338,23 @@ input, textarea, select { font: inherit; color: inherit; }
 
 @media (max-width: 860px) {
   .content { padding: 14px; }
-  .characters-layout { grid-template-columns: 1fr; }
+  .master-detail { grid-template-columns: 1fr; }
   /* En pantalla estrecha sólo se ve un panel: la lista o la ficha. */
-  .characters-layout[data-view='detail'] .grid-panel { display: none; }
-  .characters-layout[data-view='list'] .detail-panel { display: none; }
+  .master-detail[data-view='detail'] .grid-panel { display: none; }
+  .master-detail[data-view='list'] .detail-panel { display: none; }
   .back-btn { display: inline-flex; margin: 10px 10px 0; }
   .detail-head { flex-direction: column; }
   .row { flex-direction: column; }
+
+  /* Dos columnas no caben: se ve un panel y se elige con el segmentado. */
+  .chapter-panels { grid-template-columns: 1fr; }
+  .chapter-panel-switch { display: flex; gap: 4px; }
+  .chapter-panels[data-panel='A'] .chapter-panel[data-slot='B'] { display: none; }
+  .chapter-panels[data-panel='B'] .chapter-panel[data-slot='A'] { display: none; }
+  .chapter-text { min-height: 45vh; }
+
+  .plot-layout { grid-template-columns: 1fr; }
+  /* Las promesas pendientes son un resumen corto: arriba, no al final de una
+     línea de tiempo de 60 sucesos que nadie va a bajar. */
+  .plot-side { order: -1; position: static; }
 }

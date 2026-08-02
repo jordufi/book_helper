@@ -4,8 +4,9 @@ Documento de diseño. Describe **qué** hay que construir y **por qué**, no el 
 El objetivo del proyecto es apoyar un flujo de trabajo en el que la trama, los
 capítulos y los personajes se diseñan **antes** de empezar a escribir.
 
-> **Estado actual:** la infraestructura de Postgres (`docker-compose.yml`, volumen,
-> `.gitignore`) ya está creada y verificada. Falta implementar `api/` y `react/`.
+> **Estado actual:** la infraestructura de Postgres, `api/` y `react/` están
+> implementados y verificados. Las tres tabs (Personajes, Capítulos, Trama)
+> funcionan.
 
 ---
 
@@ -18,8 +19,15 @@ capítulos y los personajes se diseñan **antes** de empezar a escribir.
 | Alcance | Varios libros | Añadir `book_id` ahora es una columna; añadirlo después obliga a migrar datos. |
 | Auth | Ninguna | Uso local. El modelo de datos no impide añadirla luego. |
 
-**Fuera de alcance por ahora:** las tabs de Trama y Capítulos son sólo placeholders
-(seleccionables, muestran un título). No se les diseña esquema ni endpoints todavía.
+**Decisiones de diseño de Capítulos y Trama:**
+
+| Decisión | Elección | Motivo |
+|---|---|---|
+| Texto del capítulo | Dos campos fijos (`text_a`/`text_b`) con rótulo editable | Escribir es iterativo, pero un historial ilimitado de versiones no es lo que se pidió |
+| Reparto del capítulo | Personaje + qué hace (texto libre), reemplazo total | Corto y editado entero, igual que el arco de personaje |
+| Promesas | Entidad propia que une un suceso-siembra y un suceso-pago (nullable = pendiente) | No es un "tipo" del suceso: una promesa puede pagarse mucho después, o nunca |
+| Acoplamiento Trama↔Capítulos | Ninguno | Son dos formas distintas de mirar el libro; acoplarlas obligaría a rehacer la trama al reordenar capítulos |
+| Guardado del texto | Explícito, con indicador de cambios, Ctrl+S y aviso al salir | Coherente con "guardado explícito, no autoguardado" del resto de la app |
 
 ---
 
@@ -34,8 +42,8 @@ book_helper/
 ├── ARCHITECTURE.md         # este documento               [HECHO]
 ├── postgres-data/          # volumen de la BD (gitignored)[HECHO]
 ├── uploads/characters/     # fotos (gitignored)           [HECHO]
-├── api/                    # Express + Prisma             [PENDIENTE]
-├── react/                  # Vite + React                 [PENDIENTE]
+├── api/                    # Express + Prisma             [HECHO]
+├── react/                  # Vite + React                 [HECHO]
 └── react-native/           # vacío, trabajo futuro
 ```
 
@@ -71,13 +79,19 @@ sí mismo). La API debe permitir CORS desde la red local.
 
 ## 4. Modelo de datos
 
-Cuatro tablas. `books` es la raíz; todo lo demás cuelga de ella y se borra en
-cascada.
+Ocho tablas. `books` es la raíz; todo lo demás cuelga de ella y se borra en
+cascada, salvo `plot_promises.payoff_event_id`, que es `SET NULL`.
 
 ```
 books ──1:N──► characters ──1:N──► character_arc_stages
-                    │
-                    └───1:N──► character_relationships ──► characters
+       │            │
+       │            └───1:N──► character_relationships ──► characters
+       │
+       ├──1:N──► chapters ──1:N──► chapter_characters ──► characters
+       │
+       └──1:N──► plot_events ◄──setup (CASCADE)──┐
+                       ▲                         plot_promises
+                       └──payoff (SET NULL)───────┘
 ```
 
 ### `books`
@@ -142,6 +156,70 @@ ve a A como "estorbo". Esa asimetría es útil y hay que preservarla.
 Restricciones: `CHECK (character_id <> related_character_id)` y único en
 `(character_id, related_character_id, type)`.
 
+### `chapters`
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid PK | |
+| `book_id` | uuid FK → books | `ON DELETE CASCADE` |
+| `position` | int NOT NULL | orden dentro del libro, base 0 |
+| `title` | text NOT NULL | |
+| `synopsis` | text NULL | qué ocurre en el capítulo — el diseño, no el texto |
+| `notes` | text NULL | |
+| `text_a_label` / `text_b_label` | text NOT NULL | rótulos editables, por defecto "Borrador"/"Reescritura" |
+| `text_a` / `text_b` | text NULL | los dos textos del capítulo. Nunca viajan en una lista ni en un reemplazo masivo |
+| `created_at` / `updated_at` | timestamptz | |
+
+Sin `@@unique([book_id, position])`: el endpoint de reordenar pasa por estados
+con posiciones repetidas dentro de una transacción.
+
+### `chapter_characters`
+
+Un personaje en un capítulo y qué hace en él.
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid PK | |
+| `chapter_id` | uuid FK | `ON DELETE CASCADE` |
+| `character_id` | uuid FK | `ON DELETE CASCADE` |
+| `position` | int NOT NULL | orden del reparto dentro del capítulo |
+| `action` | text NULL | qué hace, texto libre |
+
+Único en `(chapter_id, character_id)`: un personaje no puede repetirse en el
+reparto de un mismo capítulo.
+
+### `plot_events`
+
+La línea de tiempo de la trama. Sin relación con los capítulos a propósito.
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid PK | |
+| `book_id` | uuid FK → books | `ON DELETE CASCADE` |
+| `position` | int NOT NULL | orden en la línea de tiempo, base 0 |
+| `title` | text NOT NULL | |
+| `description` | text NULL | |
+| `created_at` / `updated_at` | timestamptz | |
+
+Sin `@@unique([book_id, position])`, mismo motivo que en `chapters`.
+
+### `plot_promises`
+
+Une dos sucesos: dónde se siembra algo y dónde se paga.
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid PK | |
+| `book_id` | uuid FK → books | `ON DELETE CASCADE`. Denormalizado desde `setup_event_id` para listar/validar sin join |
+| `title` | text NOT NULL | |
+| `description` | text NULL | |
+| `setup_event_id` | uuid FK → plot_events | `ON DELETE CASCADE` — una promesa sin siembra no significa nada |
+| `payoff_event_id` | uuid FK → plot_events, NULL | `ON DELETE SET NULL` — `NULL` es "pendiente", el estado que interesa vigilar |
+
+Sin CHECK `setup_event_id <> payoff_event_id`: sembrar y pagar en el mismo
+suceso es legítimo. Tampoco se valida que el pago sea posterior a la siembra
+(puede ser un flashback); la UI lo señala con un badge, la BD no lo impide.
+
 ---
 
 ## 5. API REST
@@ -201,6 +279,41 @@ confiable), y borrado del fichero anterior al reemplazar para no dejar huérfano
 
 `/uploads` se sirve como estático desde Express.
 
+### Capítulos
+```
+GET    /api/books/:bookId/chapters        lista ligera (sin textA/textB)
+POST   /api/books/:bookId/chapters        crea (nace sin texto)
+PUT    /api/books/:bookId/chapters/order  reordena la lista entera
+GET    /api/chapters/:id                  detalle + reparto resuelto
+PATCH  /api/chapters/:id                  actualiza — SÓLO los campos enviados
+DELETE /api/chapters/:id                  borra
+PUT    /api/chapters/:id/cast             reemplaza el reparto entero
+```
+
+`PATCH` es parcial de verdad: enviar sólo `textB` no toca `textA`. Un capítulo
+entero puede pesar cientos de KB, así que — a diferencia del arco de
+personaje — aquí **no** hay un reemplazo masivo tipo `PUT`; el cliente decide
+qué campos cambiaron y sólo esos viajan. El reparto (`PUT .../cast`) sí es
+reemplazo total, como el arco: es una lista corta que el editor ya tiene
+entera en memoria.
+
+### Trama
+```
+GET    /api/books/:bookId/plot                    { events, promises } del libro
+POST   /api/books/:bookId/plot/events             crea un suceso
+PUT    /api/books/:bookId/plot/events/order       reordena la línea de tiempo
+PATCH  /api/plot-events/:id                       edita un suceso
+DELETE /api/plot-events/:id                       borra (cascada a sus promesas-siembra)
+POST   /api/books/:bookId/plot/promises           crea una promesa
+PATCH  /api/plot-promises/:id                     edita — incluye marcar/desmarcar el pago
+DELETE /api/plot-promises/:id                      borra
+```
+
+Toda mutación de trama devuelve `{ events, promises }` recargado, nunca sólo el
+elemento tocado: borrar un suceso puede arrastrar promesas sembradas en él
+(cascade) y a la vez devolver otras a "pendiente" (sus pagos, set null). Sólo
+así el cliente puede reconstruir la vista con una sola respuesta.
+
 ---
 
 ## 6. Frontend
@@ -209,63 +322,97 @@ confiable), y borrado del fichero anterior al reemplazar para no dejar huérfano
 ```
 react/src/
 ├── main.tsx, App.tsx
-├── api/client.ts              fetch envolviendo VITE_API_URL
+├── api/client.ts, hooks.ts    fetch envolviendo VITE_API_URL + hooks de react-query
+├── lib/
+│   ├── useRoute.ts            router de hash propio, con guarda de navegación
+│   ├── useUnsavedChanges.ts   indicador + Ctrl+S + aviso al salir/navegar
+│   └── useOrderDraft.ts       borrador local para reordenar con ↑/↓
 ├── components/
 │   ├── BookSelector.tsx       desplegable de libro activo
-│   ├── Tabs.tsx               Trama | Personajes | Capítulos
-│   └── ui/                    Button, Input, Textarea, Modal, ConfirmDialog
+│   └── ui.tsx                 Modal, ConfirmDialog, Section, Prose, Spinner, ErrorBanner…
 ├── tabs/
-│   ├── PlotTab.tsx            PLACEHOLDER: sólo <h1>Trama</h1>
-│   ├── ChaptersTab.tsx        PLACEHOLDER: sólo <h1>Capítulos</h1>
-│   └── characters/            ← toda la entrega real
-│       ├── CharactersTab.tsx      layout: lista + detalle
-│       ├── CharacterGrid.tsx      tarjetas con foto y nombre
-│       ├── CharacterForm.tsx      alta/edición
-│       ├── PhotoUpload.tsx        preview + subida
-│       ├── ArcEditor.tsx          etapas ordenables
-│       └── RelationshipEditor.tsx
+│   ├── characters/            Personajes: lista, ficha, formulario, foto, arco, relaciones
+│   ├── chapters/               Capítulos: lista, ficha, reparto, paneles de texto
+│   │   ├── ChaptersTab.tsx, ChapterForm.tsx, ChapterDetail.tsx
+│   │   ├── ChapterCastEditor.tsx      quién sale y qué hace
+│   │   └── ChapterTextPanels.tsx      los dos paneles, guardado explícito
+│   └── plot/                   Trama: línea de sucesos y promesas
+│       ├── PlotTab.tsx, PlotTimeline.tsx, PlotEventForm.tsx
+│       └── PromisesPanel.tsx, PromiseForm.tsx
 └── types.ts
 ```
 
 ### Layout
 Cabecera con el selector de libro, debajo las tres tabs. La tab activa vive en
-la URL (`react-router`) para que recargar no pierda el sitio.
+la URL (router de hash propio, no react-router) para que recargar no pierda el
+sitio.
 
-La tab de Personajes es **maestro-detalle**: cuadrícula de tarjetas a la
-izquierda, ficha del seleccionado a la derecha. En pantalla estrecha, la ficha
-pasa a ocupar todo y la cuadrícula se oculta — esto importa porque el objetivo a
-medio plazo es una APK.
+Personajes y Capítulos son **maestro-detalle**, con la clase CSS compartida
+`.master-detail`: lista a la izquierda, ficha del seleccionado a la derecha. En
+pantalla estrecha, la ficha pasa a ocupar todo y la lista se oculta — esto
+importa porque el objetivo a medio plazo es una APK.
 
 ### Ficha de personaje
 Secciones plegables, en este orden: Identidad (foto, nombre, rol, edad) ·
 Descripción física · Personalidad · Historia previa · Trama personal · Arco
 (resumen + etapas) · Relaciones · Notas.
 
+### Ficha de capítulo
+Secciones plegables: Sinopsis · Reparto (quién sale y qué hace, editado como el
+arco de personaje) · Texto (los dos paneles, abierta por defecto) · Notas.
+
+### Tab de Trama
+Dos columnas: la línea de tiempo de sucesos a la izquierda (con badges de qué
+promesas se siembran/pagan en cada uno), y a la derecha un panel fijo de
+promesas agrupadas en Pendientes/Cumplidas, con acceso directo para marcar el
+pago. En móvil el panel de promesas pasa a ir primero, antes que la línea de
+tiempo.
+
 ### Estado
 TanStack Query para todo lo que venga del servidor — da caché, refetch e
 invalidación sin escribir reducers. El único estado global propio es el libro
-activo (Context, persistido en `localStorage`). **No añadir Redux ni Zustand.**
+activo (persistido en `localStorage`). **No añadir Redux ni Zustand.**
 
 ### Formularios
-`react-hook-form` + `zod`, compartiendo los esquemas de validación con la API si
-es posible. Sólo `name` es obligatorio: el autor debe poder crear un personaje
-esbozado y rellenarlo más tarde.
+`react-hook-form` + `zod`. Sólo `name`/`title` es obligatorio en cada alta: el
+autor debe poder esbozar un personaje o un capítulo y rellenarlo más tarde.
 
 Guardado explícito con botón, no autoguardado. En campos de texto largos el
-autoguardado dispara escrituras a media frase y complica el "deshacer".
+autoguardado dispara escrituras a media frase y complica el "deshacer". Los
+paneles de texto del capítulo, que además pueden tardar en escribirse, añaden
+un indicador de "cambios sin guardar", el atajo Ctrl/Cmd+S y un aviso
+(`window.confirm`) antes de navegar a otro capítulo o tab, o de cerrar la
+pestaña, si hay algo sin guardar.
 
 ---
 
-## 7. Orden de implementación sugerido
+## 7. Orden de implementación
+
+Personajes:
 
 1. `api/`: Prisma schema → migración → CRUD de libros. Verificar contra la BD.
 2. `api/`: CRUD de personajes, luego arco, luego relaciones, luego subida de foto.
-3. `react/`: andamiaje Vite + tabs + selector de libro, con las tres tabs como
-   placeholder. Comprobar que la navegación funciona.
+3. `react/`: andamiaje Vite + tabs + selector de libro. Comprobar que la
+   navegación funciona.
 4. `react/`: cuadrícula de personajes y ficha en lectura.
 5. `react/`: formulario de alta/edición y borrado.
 6. `react/`: subida de foto, editor de arco, editor de relaciones.
-7. Comprobar acceso desde el móvil (`--host` + IP en `VITE_API_URL`).
+
+Capítulos y Trama, añadido después:
+
+7. Refactor preparatorio: `Section`/`Prose` compartidos, `.master-detail`
+   genérico, `Route.itemId` genérico (antes `characterId`).
+8. `api/`: schema + migración de `chapters`/`chapter_characters`, zod
+   (`longTextPatch`), rutas, límite de `express.json` a 5 MB.
+9. `api/`: schema + migración de `plot_events`/`plot_promises`, zod, rutas.
+10. `react/`: tipos, hooks, `useUnsavedChanges`, `useOrderDraft`.
+11. `react/`: lista, alta y ficha de capítulos en lectura.
+12. `react/`: editor de reparto.
+13. `react/`: los dos paneles de texto, con guardado explícito y aviso.
+14. `react/`: reordenar capítulos.
+15. `react/`: línea de tiempo de sucesos.
+16. `react/`: panel de promesas.
+17. Comprobar acceso desde el móvil (IP en `VITE_API_URL`, no `localhost`).
 
 Cada paso debería dejar la app en un estado ejecutable.
 
@@ -278,5 +425,12 @@ Cada paso debería dejar la app en un estado ejecutable.
   del volumen. Ya está probado y funcionando.
 - **`postgres-data/` y `uploads/` nunca se commitean.** Ya están en `.gitignore`.
 - **No crear nada en `react-native/`.**
-- **Trama y Capítulos son placeholders.** No inventarles esquema ni endpoints.
+- **Trama y Capítulos no se acoplan entre sí.** Los sucesos de la trama no
+  llevan `chapter_id`: son dos formas distintas de mirar el libro.
+- **`longTextPatch` (no `longText`) en los `*UpdateSchema` de capítulo y
+  suceso**, para que un PATCH parcial no borre un campo que no se envió. Ver
+  el detalle en CLAUDE.md.
+- **No hay `@@unique([book_id, position])`** en `chapters` ni `plot_events`:
+  reordenar en transacción pasa por posiciones repetidas. El orden lo garantiza
+  el endpoint `PUT .../order`.
 - El puerto 8080 puede estar ocupado; Adminer usa el 8081.

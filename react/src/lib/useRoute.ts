@@ -11,22 +11,41 @@ export const TAB_LABELS: Record<TabId, string> = {
 
 export interface Route {
   tab: TabId;
-  /** Personaje seleccionado, sólo con tab === 'personajes'. */
-  characterId: string | null;
+  /**
+   * Segundo segmento de la URL: el elemento seleccionado dentro de la tab.
+   * Cada tab lo interpreta a su manera — personaje en Personajes, capítulo en
+   * Capítulos. Trama no lo usa. Cambiar de tab lo descarta.
+   */
+  itemId: string | null;
 }
 
 const isTab = (v: string): v is TabId => (TABS as readonly string[]).includes(v);
 
 function parse(hash: string): Route {
-  const [tab, characterId] = hash.replace(/^#\/?/, '').split('/');
+  const [tab, itemId] = hash.replace(/^#\/?/, '').split('/');
   return {
     tab: tab && isTab(tab) ? tab : 'personajes',
-    characterId: characterId || null,
+    itemId: itemId || null,
   };
 }
 
-const build = ({ tab, characterId }: Route) =>
-  `#/${tab}${characterId ? `/${characterId}` : ''}`;
+const build = ({ tab, itemId }: Route) => `#/${tab}${itemId ? `/${itemId}` : ''}`;
+
+type Guard = () => boolean;
+let guard: Guard | null = null;
+
+/**
+ * Registra una confirmación previa a cualquier cambio de ruta interno (p.ej.
+ * "hay cambios sin guardar, ¿descartarlos?"). A nivel de módulo y no de
+ * Context: sólo puede haber un editor con guarda abierto a la vez, y un
+ * Context obligaría a envolver toda la app para una funcionalidad de un
+ * componente. No cubre el botón Atrás del navegador ni la edición manual del
+ * hash: `hashchange` llega cuando el cambio ya ha ocurrido, y revertirlo
+ * ensuciaría el historial.
+ */
+export function setNavigationGuard(next: Guard | null) {
+  guard = next;
+}
 
 /**
  * Router mínimo basado en hash. Sustituye a react-router por dos motivos: la
@@ -46,12 +65,13 @@ export function useRoute(): [Route, (next: Partial<Route>) => void] {
   }, []);
 
   const navigate = useCallback((next: Partial<Route>) => {
+    if (guard && !guard()) return;
     setRoute((current) => {
       const merged = { ...current, ...next };
-      // Cambiar de tab descarta el personaje seleccionado, si no la URL
+      // Cambiar de tab descarta el elemento seleccionado, si no la URL
       // guardaría un id que la nueva tab no sabe interpretar.
-      if (next.tab && next.tab !== current.tab && next.characterId === undefined) {
-        merged.characterId = null;
+      if (next.tab && next.tab !== current.tab && next.itemId === undefined) {
+        merged.itemId = null;
       }
       const hash = build(merged);
       if (hash !== window.location.hash) window.location.hash = hash;

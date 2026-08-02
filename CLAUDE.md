@@ -14,9 +14,8 @@ UI y commits. Mantenerlo.
 `api/` y `react/` están implementados y verificados. `react-native/` se deja
 **vacío a propósito**: no crear nada dentro.
 
-Dentro de `react/`, sólo la tab de **Personajes** está implementada. Trama y
-Capítulos son placeholders seleccionables que muestran un título — no
-inventarles esquema ni endpoints.
+Dentro de `react/`, las **tres tabs** están implementadas: Personajes, Capítulos
+y Trama.
 
 ## Comandos
 
@@ -58,8 +57,11 @@ react (Vite :5173) ──HTTP──► api (Express :3000) ──TCP──► po
                             ./uploads/characters        ./postgres-data
 ```
 
-`books` es la raíz; `characters` cuelga de ella, y `character_arc_stages` y
-`character_relationships` cuelgan de `characters`. Todo con `ON DELETE CASCADE`.
+`books` es la raíz; de ella cuelgan `characters`, `chapters` y `plot_events`/
+`plot_promises`. `character_arc_stages`, `character_relationships` y
+`chapter_characters` cuelgan a su vez de `characters`/`chapters`. Todo
+`ON DELETE CASCADE`, **salvo `plot_promises.payoff_event_id`, que es `SET NULL`**
+(ver más abajo).
 
 ### Rutas de la API
 
@@ -71,6 +73,21 @@ distintos, porque unas rutas cuelgan del libro y otras del personaje:
 | `bookCharactersRouter` | `/api/books/:bookId/characters` — listar y crear |
 | `charactersRouter` | `/api/characters` — detalle, edición, arco, relaciones, foto |
 | `relationshipsRouter` | `/api/relationships` — borrado por id |
+
+`api/src/routes/chapters.ts` sigue el mismo patrón:
+
+| Router | Montaje |
+|---|---|
+| `bookChaptersRouter` | `/api/books/:bookId/chapters` — listar, crear, reordenar |
+| `chaptersRouter` | `/api/chapters` — detalle, edición, borrado, reparto |
+
+`api/src/routes/plot.ts` también:
+
+| Router | Montaje |
+|---|---|
+| `bookPlotRouter` | `/api/books/:bookId/plot` — trama completa, alta y orden de sucesos, alta de promesas |
+| `plotEventsRouter` | `/api/plot-events` — edición y borrado de sucesos |
+| `plotPromisesRouter` | `/api/plot-promises` — edición y borrado de promesas |
 
 `GET /api/books/:bookId/characters` devuelve una **versión ligera** (sin arco ni
 relaciones) porque alimenta una cuadrícula. `GET /api/characters/:id` devuelve el
@@ -88,14 +105,18 @@ que devolvió Prisma. Así el cliente puede reemplazar su caché sin refetch.
 | `src/state/useActiveBook.ts` | Libro activo, persistido en `localStorage` |
 | `src/api/client.ts` | `fetch` envuelto; traduce errores de red y de zod |
 | `src/api/hooks.ts` | Todos los hooks de react-query, con las claves de caché |
-| `src/tabs/characters/` | La tab implementada: lista, ficha, formulario, foto, arco, relaciones |
+| `src/tabs/characters/` | Personajes: lista, ficha, formulario, foto, arco, relaciones |
+| `src/tabs/chapters/` | Capítulos: lista, ficha, reparto, los dos paneles de texto |
+| `src/tabs/plot/` | Trama: línea de sucesos y panel de promesas |
+| `src/lib/useUnsavedChanges.ts` | Indicador de cambios sin guardar + Ctrl+S + aviso al salir/navegar |
+| `src/lib/useOrderDraft.ts` | Borrador local para reordenar una lista con ↑/↓ (capítulos, sucesos) |
 
 El estado del servidor lo lleva **react-query**; el único estado global propio
 es el libro activo. No introducir Redux ni Zustand.
 
-El layout de personajes es maestro-detalle. En móvil sólo cabe un panel: lo
-decide el CSS mediante `data-view` en `.characters-layout`, no un condicional
-en JS.
+El layout maestro-detalle (Personajes, Capítulos) usa la clase compartida
+`.master-detail`. En móvil sólo cabe un panel: lo decide el CSS mediante
+`data-view`, no un condicional en JS.
 
 ## Decisiones que parecen errores y no lo son
 
@@ -125,6 +146,42 @@ en JS.
 - **Las mutaciones siembran la caché con su respuesta** (`qc.setQueryData`) en
   vez de invalidar el detalle, porque la API ya devuelve el personaje completo.
   La *lista* sí se invalida: nombre, rol o foto pueden haber cambiado en ella.
+- **`longTextPatch` existe además de `longText`** (`api/src/lib/schemas.ts`).
+  `longText` es `.nullish().transform()`: con la clave ausente el transform
+  devuelve `null`, zod lo escribe en la salida y Prisma **borra la columna**. En
+  un capítulo eso significa que guardar el panel A vaciaría el panel B. Los
+  `*UpdateSchema` de capítulo y suceso usan `longTextPatch`, que deja pasar
+  `undefined` para que zod omita la clave. No "simplificar" volviendo a
+  `longText` + `.partial()`: esa protección es invisible y depende de un
+  detalle interno de zod.
+- **El PATCH de capítulo se envía sólo con los campos sucios**
+  (`ChapterTextPanels.save`, en `react/src/tabs/chapters/`). Enviar el capítulo
+  entero pisaría el otro panel con una copia obsoleta y movería cientos de KB
+  por guardado.
+- **No hay `@@unique([book_id, position])`** en `chapters` ni en `plot_events`.
+  Reordenar en transacción pasa por estados con posiciones repetidas. El orden
+  lo garantiza el endpoint `PUT .../order`, que exige la lista completa de ids.
+- **`setup_event_id` es CASCADE y `payoff_event_id` es SET NULL** en
+  `plot_promises`. Borrar el suceso donde se paga devuelve la promesa a
+  "pendiente", que es información útil; borrar el de la siembra la deja sin
+  sentido, así que se borra con ella.
+- **Trama y Capítulos no se tocan entre sí.** Los sucesos de `plot_events` no
+  tienen `chapter_id`. Son dos formas distintas de mirar el libro; acoplarlas
+  obligaría a rehacer la trama cada vez que se reordenan los capítulos.
+- **Dos campos de texto por capítulo (`text_a`/`text_b`), no versiones
+  ilimitadas.** Cada uno con su rótulo editable (`text_a_label`/`text_b_label`,
+  NOT NULL). Decisión explícita del usuario.
+- **`express.json` está en 5 MB**, no 1 MB, porque un capítulo entero cabe en
+  `textA`/`textB`. `errorHandler` mapea `entity.too.large` a 413; sin esa rama,
+  un cuerpo mayor caía en el 500 genérico.
+- **Toda la tab de Trama vive en una sola clave de caché**
+  (`['books', bookId, 'plot']`) y las mutaciones devuelven `{ events, promises }`
+  enteros, porque borrar un suceso puede arrastrar promesas (cascade en la
+  siembra) y dejar otras pendientes (set null en el pago) a la vez.
+- **El aviso de "cambios sin guardar" (`useUnsavedChanges` + `setNavigationGuard`
+  en `useRoute.ts`) cubre la navegación interna y el cierre de pestaña, no el
+  botón Atrás del navegador.** Interceptar `hashchange` llega cuando el cambio
+  ya ha ocurrido; revertirlo ensuciaría el historial. No merece la pena.
 
 ## Red y acceso desde el móvil
 

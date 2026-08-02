@@ -11,12 +11,21 @@ El diseño completo está en [ARCHITECTURE.md](ARCHITECTURE.md).
 |---|---|
 | Postgres + volumen persistente | ✅ funcionando |
 | `api/` (Express + Prisma) | ✅ funcionando |
-| `react/` — tab de Personajes | ✅ funcionando |
-| `react/` — tabs Trama y Capítulos | ⬜ placeholders, por diseño |
+| `react/` — tabs Personajes, Capítulos y Trama | ✅ funcionando |
 | `react-native/` | 🔮 futuro |
 
 La tab de Personajes permite crear y editar personajes, subir y quitar su foto,
 construir el arco como una línea de tiempo ordenable, y relacionarlos entre sí.
+
+La tab de Capítulos es una lista ordenable de capítulos; cada uno tiene su
+reparto (qué personajes salen y qué hacen) y su texto en **dos paneles**
+lado a lado, cada uno con un rótulo editable ("Borrador"/"Reescritura" por
+defecto), pensados para iterar sobre el mismo capítulo. El guardado es
+explícito (botón o Ctrl+S), con aviso si intentas salir con cambios sin guardar.
+
+La tab de Trama es una línea de tiempo de sucesos con **promesas**: cada
+promesa se siembra en un suceso y, opcionalmente, se paga en otro. Un panel
+aparte agrupa las promesas pendientes y las cumplidas.
 
 ## Stack
 

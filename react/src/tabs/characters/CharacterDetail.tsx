@@ -1,40 +1,11 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { useCharacter, useDeleteCharacter, useUpdateCharacter } from '../../api/hooks';
-import { ConfirmDialog, ErrorBanner, Spinner } from '../../components/ui';
+import { ConfirmDialog, ErrorBanner, Prose, Section, Spinner } from '../../components/ui';
 import { ROLE_LABELS, type CharacterSummary } from '../../types';
 import { ArcEditor } from './ArcEditor';
 import { CharacterForm } from './CharacterForm';
 import { PhotoUpload } from './PhotoUpload';
 import { RelationshipEditor } from './RelationshipEditor';
-
-function Section({
-  title,
-  children,
-  filled,
-  defaultOpen = true,
-}: {
-  title: string;
-  children: ReactNode;
-  filled?: boolean;
-  defaultOpen?: boolean;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="section">
-      <button className="section-head" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span className="chev">▶</span>
-        {title}
-        {/* Punto verde: la sección tiene contenido. Permite ver de un vistazo
-            qué queda por rellenar con las secciones plegadas. */}
-        {filled && <span className="filled" aria-label="con contenido" />}
-      </button>
-      {open && <div className="section-body">{children}</div>}
-    </div>
-  );
-}
-
-const Prose = ({ text }: { text: string | null }) =>
-  text ? <div className="prose">{text}</div> : <p className="empty-note">Sin rellenar.</p>;
 
 export function CharacterDetail({
   characterId,

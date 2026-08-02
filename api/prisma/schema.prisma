@@ -22,7 +22,10 @@ model Book {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  characters Character[]
+  characters   Character[]
+  chapters     Chapter[]
+  plotEvents   PlotEvent[]
+  plotPromises PlotPromise[]
 
   @@map("books")
 }
@@ -62,6 +65,7 @@ model Character {
   arcStages     CharacterArcStage[]
   relationships CharacterRelationship[] @relation("CharacterRelationshipSubject")
   relatedTo     CharacterRelationship[] @relation("CharacterRelationshipObject")
+  chapters      ChapterCharacter[]
 
   @@index([bookId])
   @@map("characters")
@@ -96,4 +100,107 @@ model CharacterRelationship {
   @@unique([characterId, relatedCharacterId, type])
   @@index([characterId])
   @@map("character_relationships")
+}
+
+model Chapter {
+  id     String @id @default(uuid())
+  bookId String @map("book_id")
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  /// Orden dentro del libro, base 0. Sin unique con book_id a propósito:
+  /// reordenar en transacción pasa por estados con posiciones repetidas.
+  position Int
+  title    String
+
+  /// Qué ocurre en el capítulo. Es el DISEÑO, distinto del texto escrito.
+  synopsis String?
+  notes    String?
+
+  /// Rótulos de los dos paneles. Editables, pero nunca vacíos.
+  textALabel String @default("Borrador")    @map("text_a_label")
+  textBLabel String @default("Reescritura") @map("text_b_label")
+
+  /// Dos campos fijos a propósito: escribir es iterativo, pero un historial
+  /// de versiones ilimitado no es lo que se pidió. Aquí cabe un capítulo
+  /// entero, así que NUNCA viajan en una lista ni en un reemplazo masivo.
+  textA String? @map("text_a")
+  textB String? @map("text_b")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  cast ChapterCharacter[]
+
+  @@index([bookId, position])
+  @@map("chapters")
+}
+
+/// Un personaje en un capítulo y qué hace en él.
+model ChapterCharacter {
+  id        String  @id @default(uuid())
+  chapterId String  @map("chapter_id")
+  chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  characterId String    @map("character_id")
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  position Int
+  /// Qué hace en este capítulo. Texto libre.
+  action String?
+
+  @@unique([chapterId, characterId])
+  @@index([chapterId, position])
+  @@map("chapter_characters")
+}
+
+/// La línea de tiempo de la trama son sucesos, sin relación con los capítulos:
+/// son dos formas distintas de mirar el libro. No añadir chapter_id.
+model PlotEvent {
+  id     String @id @default(uuid())
+  bookId String @map("book_id")
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  position    Int
+  title       String
+  description String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  seeds   PlotPromise[] @relation("PromiseSetup")
+  payoffs PlotPromise[] @relation("PromisePayoff")
+
+  @@index([bookId, position])
+  @@map("plot_events")
+}
+
+/// Une dos sucesos: dónde se siembra algo y dónde se paga. El pago es
+/// nullable a propósito: NULL es "promesa pendiente", el estado que interesa
+/// vigilar. No es un "tipo" del suceso.
+model PlotPromise {
+  id     String @id @default(uuid())
+  /// Denormalizado desde setupEvent para poder listar y indexar las promesas
+  /// del libro sin pasar por el join, y para validar que los dos sucesos son
+  /// del mismo libro.
+  bookId String @map("book_id")
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+
+  /// Cascade: una promesa sin siembra no significa nada.
+  setupEventId String    @map("setup_event_id")
+  setupEvent   PlotEvent @relation("PromiseSetup", fields: [setupEventId], references: [id], onDelete: Cascade)
+
+  /// SetNull: borrar el suceso donde se pagaba devuelve la promesa a pendiente.
+  payoffEventId String?    @map("payoff_event_id")
+  payoffEvent   PlotEvent? @relation("PromisePayoff", fields: [payoffEventId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@index([bookId])
+  @@index([setupEventId])
+  @@index([payoffEventId])
+  @@map("plot_promises")
 }

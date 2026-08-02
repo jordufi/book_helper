@@ -16,11 +16,11 @@ function CharacterCard({
   onClick: () => void;
 }) {
   return (
-    <button className="character-card" aria-current={active} onClick={onClick}>
+    <button className="list-card" aria-current={active} onClick={onClick}>
       <Avatar src={fileUrl(character.photoUrl)} name={character.name} />
-      <div className="character-card-body">
-        <div className="character-card-name">{character.name}</div>
-        <div className="character-card-meta">
+      <div className="list-card-body">
+        <div className="list-card-title">{character.name}</div>
+        <div className="list-card-meta">
           <span className={`badge badge-${character.role}`}>{ROLE_LABELS[character.role]}</span>
           {character.age && ` · ${character.age}`}
         </div>
@@ -59,7 +59,7 @@ export function CharactersTab({
   const view = characterId ? 'detail' : 'list';
 
   return (
-    <div className="characters-layout" data-view={view}>
+    <div className="master-detail" data-view={view}>
       <div className="grid-panel">
         <div className="grid-head">
           <span className="grid-count">
@@ -73,7 +73,7 @@ export function CharactersTab({
         {list.length === 0 ? (
           <p className="empty-note">Todavía no hay personajes en este libro.</p>
         ) : (
-          <div className="character-list">
+          <div className="card-list">
             {list.map((c) => (
               <CharacterCard
                 key={c.id}

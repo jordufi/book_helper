@@ -43,6 +43,12 @@ export function errorHandler(
     return;
   }
 
+  // body-parser rechaza un cuerpo mayor que el límite de express.json.
+  if (typeof err === 'object' && err !== null && 'type' in err && (err as { type: string }).type === 'entity.too.large') {
+    res.status(413).json({ error: 'El contenido enviado es demasiado grande' });
+    return;
+  }
+
   // Violación de clave foránea: normalmente un id de libro/personaje inexistente.
   if (typeof err === 'object' && err !== null && 'code' in err) {
     const code = (err as { code: string }).code;
