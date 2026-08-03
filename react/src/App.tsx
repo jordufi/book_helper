@@ -1,16 +1,17 @@
 import { BookSelector } from './components/BookSelector';
 import { SaveIndicator } from './components/SaveIndicator';
 import { ErrorBanner, Spinner } from './components/ui';
-import { TABS, TAB_LABELS, useRoute } from './lib/useRoute';
+import { NAV_TABS, TAB_LABELS, useRoute } from './lib/useRoute';
 import { useActiveBook } from './state/useActiveBook';
 import { BooksTab } from './tabs/books/BooksTab';
 import { CharactersTab } from './tabs/characters/CharactersTab';
 import { ChaptersTab } from './tabs/chapters/ChaptersTab';
+import { OverviewTab } from './tabs/overview/OverviewTab';
 import { PlotTab } from './tabs/plot/PlotTab';
 
 export default function App() {
   const [route, navigate] = useRoute();
-  const { books, bookId, setBookId, isLoading, error } = useActiveBook();
+  const { books, activeBook, bookId, setBookId, isLoading, error } = useActiveBook();
 
   return (
     <div className="app">
@@ -18,12 +19,17 @@ export default function App() {
         <div className="brand">
           Book<span>Helper</span>
         </div>
-        <BookSelector books={books} bookId={bookId} onSelect={setBookId} />
+        <BookSelector
+          books={books}
+          bookId={bookId}
+          onSelect={setBookId}
+          onManage={() => navigate({ tab: 'libros' })}
+        />
         <SaveIndicator />
       </header>
 
       <nav className="tabs" role="tablist">
-        {TABS.map((tab) => (
+        {NAV_TABS.map((tab) => (
           <button
             key={tab}
             className="tab"
@@ -41,6 +47,8 @@ export default function App() {
           <ErrorBanner error={error} />
         ) : isLoading ? (
           <Spinner />
+        ) : route.tab === 'libro' ? (
+          <OverviewTab bookId={bookId} book={activeBook} />
         ) : route.tab === 'personajes' ? (
           <CharactersTab
             bookId={bookId}

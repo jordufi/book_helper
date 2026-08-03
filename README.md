@@ -11,8 +11,13 @@ El diseño completo está en [ARCHITECTURE.md](ARCHITECTURE.md).
 |---|---|
 | Postgres + volumen persistente | ✅ funcionando |
 | `api/` (Express + Prisma) | ✅ funcionando |
-| `react/` — tabs Trama, Personajes, Capítulos y Libros | ✅ funcionando |
+| `react/` — tabs Libro, Trama, Personajes, Capítulos + gestión de libros | ✅ funcionando |
 | `react-native/` | 🔮 futuro |
+
+La tab de Libro es un resumen de sólo lectura: la trama, los personajes y los
+capítulos del libro activo en una sola pantalla, sin nada que editar. Sirve
+para ver el conjunto sin saltar entre tabs, y tiene un botón para exportar
+ese mismo resumen a un fichero `.md`.
 
 La tab de Personajes permite crear y editar personajes, subir y quitar su foto,
 construir el arco como una línea de tiempo ordenable, y relacionarlos entre sí
@@ -35,8 +40,11 @@ La tab de Trama es una línea de tiempo de sucesos con **promesas**: cada
 promesa se siembra en un suceso y, opcionalmente, se paga en otro. Un panel
 aparte agrupa las promesas pendientes y las cumplidas.
 
-La tab de Libros gestiona los libros en sí: crear, editar y borrar. Borrar uno
-se lleva por delante sus personajes, capítulos y trama (la app avisa antes).
+"Gestionar libros", en la cabecera junto al selector de libro, abre la lista
+completa de libros: crear, editar y borrar. Borrar uno se lleva por delante
+sus personajes, capítulos y trama (la app avisa antes). No es una tab más:
+las tabs (Trama, Personajes, Capítulos) son para el trabajo diario dentro de
+un libro; gestionar libros es otra cosa.
 
 ## Stack
 

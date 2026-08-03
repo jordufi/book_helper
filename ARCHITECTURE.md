@@ -345,6 +345,9 @@ react/src/
 │   ├── SaveIndicator.tsx      "Todo guardado"/"Guardar" en la cabecera; Ctrl+S y beforeunload
 │   └── ui.tsx                 Modal, ConfirmDialog, Section, Prose, Spinner, ErrorBanner…
 ├── tabs/
+│   ├── overview/                Libro: resumen de sólo lectura (trama + personajes + capítulos)
+│   │   ├── OverviewTab.tsx
+│   │   └── overviewToMarkdown.ts   genera el .md que descarga "Exportar como Markdown"
 │   ├── characters/            Personajes: lista, ficha, formulario, foto, arco, relaciones
 │   ├── chapters/               Capítulos: lista, ficha, reparto, paneles de texto
 │   │   ├── ChaptersTab.tsx, ChapterForm.tsx, ChapterDetail.tsx
@@ -360,9 +363,24 @@ react/src/
 ```
 
 ### Layout
-Cabecera con el selector de libro, debajo las cuatro tabs. La tab activa vive
-en la URL (router de hash propio, no react-router) para que recargar no pierda
-el sitio.
+Cabecera con el selector de libro, debajo las cuatro tabs de trabajo diario
+(Libro, Trama, Personajes, Capítulos — `NAV_TABS` en `useRoute.ts`). La tab
+activa vive en la URL (router de hash propio, no react-router) para que
+recargar no pierda el sitio.
+
+### Tab Libro
+La primera tab, resumen de sólo lectura de todo el libro: la línea de trama
+(sucesos + badges de promesas), la lista de personajes y la lista de
+capítulos, cada una en su `Section` plegable. No tiene formularios ni botones
+de editar/borrar — para eso están las otras tres tabs. Reutiliza `usePlot`,
+`useCharacters` y `useChapters` tal cual, así que no añade ninguna petición
+nueva a la API ni caché propia.
+
+El botón "Exportar como Markdown" vuelca exactamente esas tres secciones a un
+fichero `.md` (`overviewToMarkdown.ts`) y dispara la descarga en el cliente
+(`downloadFile.ts`, `Blob` + `<a download>`) — no hay endpoint en la API para
+esto, todos los datos ya están cargados. El nombre del fichero sale de
+`slugify(book.title)`.
 
 Personajes y Capítulos son **maestro-detalle**, con la clase CSS compartida
 `.master-detail`: lista a la izquierda, ficha del seleccionado a la derecha. En
@@ -378,10 +396,12 @@ Descripción física · Personalidad · Historia previa · Trama personal · Arc
 Secciones plegables: Sinopsis · Reparto (quién sale y qué hace, editado como el
 arco de personaje) · Texto (los dos paneles, abierta por defecto) · Notas.
 
-### Tab de Libros
+### Gestión de libros
 Lista plana (no maestro-detalle: no hace falta una ficha aparte para tres
-campos). Cada fila tiene Editar y Borrar; el libro activo lleva un badge. El
-alta rápida del `BookSelector` de la cabecera sigue existiendo aparte — ver
+campos). Cada fila tiene Editar y Borrar; el libro activo lleva un badge. Es
+la ruta `#/libros`, pero no aparece en la barra de tabs: se llega con
+"Gestionar libros" en la cabecera, junto al selector de libro. El alta rápida
+del `BookSelector` (sólo título y autor) sigue existiendo aparte — ver
 CLAUDE.md.
 
 ### Tab de Trama

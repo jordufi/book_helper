@@ -7,10 +7,12 @@ export function BookSelector({
   books,
   bookId,
   onSelect,
+  onManage,
 }: {
   books: Book[];
   bookId: string | null;
   onSelect: (id: string) => void;
+  onManage: () => void;
 }) {
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState('');
@@ -46,6 +48,10 @@ export function BookSelector({
 
       <button className="btn btn-sm" onClick={() => setCreating(true)}>
         + Libro
+      </button>
+
+      <button className="btn btn-ghost btn-sm" onClick={onManage}>
+        Gestionar libros
       </button>
 
       {creating && (

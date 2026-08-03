@@ -1,15 +1,25 @@
 import { useCallback, useEffect, useState } from 'react';
 import { confirmDiscardUnsaved } from './saveStatus';
 
-export const TABS = ['trama', 'personajes', 'capitulos', 'libros'] as const;
+export const TABS = ['libro', 'trama', 'personajes', 'capitulos', 'libros'] as const;
 export type TabId = (typeof TABS)[number];
 
 export const TAB_LABELS: Record<TabId, string> = {
+  libro: 'Libro',
   trama: 'Trama',
   personajes: 'Personajes',
   capitulos: 'Capítulos',
   libros: 'Libros',
 };
+
+/**
+ * Tabs que aparecen en la barra de navegación. "libros" queda fuera a
+ * propósito: es gestión (crear/editar/borrar libros), no una vista de
+ * trabajo diario, así que se llega ahí desde "Gestionar libros" en la
+ * cabecera, junto al selector de libro — sigue siendo la misma ruta
+ * `#/libros`, sólo cambia la entrada.
+ */
+export const NAV_TABS = TABS.filter((tab) => tab !== 'libros');
 
 export interface Route {
   tab: TabId;

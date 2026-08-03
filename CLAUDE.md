@@ -14,8 +14,10 @@ UI y commits. Mantenerlo.
 `api/` y `react/` están implementados y verificados. `react-native/` se deja
 **vacío a propósito**: no crear nada dentro.
 
-Dentro de `react/`, las **cuatro tabs** están implementadas: Trama, Personajes,
-Capítulos y Libros (gestión: alta, edición y borrado).
+Dentro de `react/`, las cuatro tabs de trabajo diario están implementadas:
+Libro (resumen de sólo lectura), Trama, Personajes y Capítulos. La gestión de
+libros (alta completa, edición y borrado) no es una tab — se abre con
+"Gestionar libros" en la cabecera, junto al selector de libro (ver más abajo).
 
 ## Comandos
 
@@ -105,10 +107,12 @@ que devolvió Prisma. Así el cliente puede reemplazar su caché sin refetch.
 | `src/state/useActiveBook.ts` | Libro activo, persistido en `localStorage` |
 | `src/api/client.ts` | `fetch` envuelto; traduce errores de red y de zod |
 | `src/api/hooks.ts` | Todos los hooks de react-query, con las claves de caché |
+| `src/tabs/overview/` | Libro: resumen de sólo lectura de trama + personajes + capítulos, reutiliza los mismos hooks/caché que esas tabs; exporta a Markdown |
+| `src/lib/downloadFile.ts` | Dispara la descarga de un fichero de texto generado en el cliente (`Blob` + `<a download>`) |
 | `src/tabs/characters/` | Personajes: lista, ficha, formulario, foto, arco, relaciones |
 | `src/tabs/chapters/` | Capítulos: lista, ficha, reparto, los dos paneles de texto |
 | `src/tabs/plot/` | Trama: línea de sucesos y panel de promesas |
-| `src/tabs/books/` | Libros: alta, edición y borrado (lista simple, sin maestro-detalle) |
+| `src/tabs/books/` | Gestión de libros: alta, edición y borrado (lista simple, sin maestro-detalle). No está en la barra de tabs — ver `NAV_TABS` |
 | `src/lib/saveStatus.ts` | Registro global de borradores sin guardar (multi-entrada) + `confirmDiscardUnsaved` |
 | `src/lib/useUnsavedChanges.ts` | Registra un borrador (dirty/saving/save) en `saveStatus.ts` |
 | `src/lib/useSaveStatus.ts` | Hook de lectura de `saveStatus.ts` (`useSyncExternalStore`) |
@@ -211,10 +215,31 @@ El layout maestro-detalle (Personajes, Capítulos) usa la clase compartida
   servidor (no basta con "estoy en modo edición"): entrar a editar sin cambiar
   nada no debe marcar el libro como sucio.
 - **Hay dos sitios para crear un libro: el `+ Libro` del `BookSelector` en la
-  cabecera (alta rápida con título y autor) y la tab Libros (alta completa con
-  sinopsis, más edición y borrado).** Duplicidad intencional: el selector debe
-  seguir permitiendo crear sin cambiar de tab mientras se trabaja en otra cosa.
-  No fusionarlos en un único componente.
+  cabecera (alta rápida con título y autor) y "Gestionar libros", también en la
+  cabecera (alta completa con sinopsis, más edición y borrado).** Duplicidad
+  intencional: el selector debe seguir permitiendo crear sin salir de la tab en
+  la que se está trabajando. No fusionarlos en un único componente.
+- **La tab Libro (`OverviewTab`) no tiene endpoint propio.** Llama a los
+  mismos tres hooks que Trama/Personajes/Capítulos (`usePlot`, `useCharacters`,
+  `useChapters`), así que comparte caché con ellos: si ya se visitó alguna de
+  esas tabs, Libro no repite la petición. Es deliberadamente de sólo lectura
+  — sin botones de editar, borrar ni crear, ni tarjetas clicables — porque su
+  propósito es dar una vista de conjunto, no ser una cuarta forma de editar lo
+  mismo.
+- **"Exportar como Markdown" (`overviewToMarkdown.ts`) se genera enteramente
+  en el cliente**, sin endpoint en la API: los datos ya están en memoria
+  (mismos hooks que pintan la tab) y el navegador puede disparar la descarga
+  con un `Blob` + `<a download>` (`downloadFile.ts`). El Markdown incluye
+  exactamente los mismos campos que se ven en pantalla — ni más (nada de
+  personalidad, backstory o texto de capítulos) ni menos —, porque el botón
+  exporta "esto", no una ficha completa del libro.
+- **La gestión de libros (`BooksTab`) no está en la barra de tabs.** Es una
+  ruta más (`#/libros`, sigue en `TABS` en `useRoute.ts` para que el router la
+  reconozca), pero `NAV_TABS` la excluye de la barra de navegación: se llega
+  desde el botón "Gestionar libros" del `BookSelector`, porque es gestión
+  puntual, no una vista de trabajo diario como Trama/Personajes/Capítulos.
+  Ningún tab queda marcado como activo mientras se está ahí — es intencional,
+  no un bug de `aria-selected`.
 - **`DELETE /api/books/:id` recoge las `photoUrl` de los personajes del libro
   *antes* de borrar y las limpia *después*** (`api/src/routes/books.ts`), igual
   que al borrar un personaje suelto. Sin esto, borrar un libro dejaba las

@@ -15,6 +15,7 @@ export function BooksTab({ books, activeBookId }: { books: Book[]; activeBookId:
 
   return (
     <div>
+      <h1 style={{ marginBottom: 16 }}>Gestionar libros</h1>
       <div className="grid-head">
         <span className="grid-count">
           {books.length} {books.length === 1 ? 'libro' : 'libros'}
