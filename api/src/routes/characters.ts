@@ -142,7 +142,7 @@ charactersRouter.post(
   '/:id/relationships',
   asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const data = relationshipCreateSchema.parse(req.body);
+    const { reciprocalType, ...data } = relationshipCreateSchema.parse(req.body);
 
     if (data.relatedCharacterId === id) {
       throw new HttpError(400, 'Un personaje no puede relacionarse consigo mismo');
@@ -162,7 +162,26 @@ charactersRouter.post(
       throw new HttpError(400, 'Los dos personajes deben pertenecer al mismo libro');
     }
 
-    await prisma.characterRelationship.create({ data: { ...data, characterId: id } });
+    if (reciprocalType) {
+      // Opt-in: además de A -> B, crea B -> A con su propio texto (p.ej.
+      // "hermano" / "hermana"). En transacción: si la inversa choca con una
+      // relación ya existente (P2002), tampoco se crea la primera — mejor
+      // que dejar sólo un sentido creado a medias.
+      await prisma.$transaction([
+        prisma.characterRelationship.create({ data: { ...data, characterId: id } }),
+        prisma.characterRelationship.create({
+          data: {
+            characterId: data.relatedCharacterId,
+            relatedCharacterId: id,
+            type: reciprocalType,
+            description: null,
+          },
+        }),
+      ]);
+    } else {
+      await prisma.characterRelationship.create({ data: { ...data, characterId: id } });
+    }
+
     res.status(201).json(await getCharacterOrThrow(id));
   }),
 );

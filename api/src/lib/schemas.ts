@@ -47,6 +47,15 @@ export const relationshipCreateSchema = z.object({
   relatedCharacterId: z.string().uuid('Id de personaje inválido'),
   type: z.string().trim().min(1, 'Indica el tipo de relación').max(100),
   description: longText,
+  // Opt-in: si se envía, crea también la relación inversa (el otro personaje
+  // hacia este) con este texto. Ausente = sólo se crea el sentido pedido; las
+  // relaciones siguen siendo dirigidas por defecto (ver CLAUDE.md).
+  reciprocalType: z
+    .string()
+    .trim()
+    .max(100)
+    .nullish()
+    .transform((v) => v || null),
 });
 
 export type BookCreate = z.infer<typeof bookCreateSchema>;

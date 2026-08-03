@@ -142,8 +142,10 @@ crisis → transformación*).
 Índice en `(character_id, position)`.
 
 ### `character_relationships`
-Dirigida y no recíproca automáticamente: A puede ver a B como "mentor" mientras B
-ve a A como "estorbo". Esa asimetría es útil y hay que preservarla.
+Dirigida y no recíproca por defecto: A puede ver a B como "mentor" mientras B
+ve a A como "estorbo". Esa asimetría es útil y hay que preservarla — pero al
+crear una relación se puede pedir explícitamente también la inversa, con su
+propio texto (ver `reciprocalType` en §5).
 
 | Columna | Tipo | Notas |
 |---|---|---|
@@ -229,12 +231,16 @@ HTTP correcto y `{ "error": "mensaje" }`.
 
 ### Libros
 ```
-GET    /api/books                    lista
+GET    /api/books                    lista, con recuento de personajes/capítulos/sucesos
 POST   /api/books                    crea
 GET    /api/books/:id                detalle
 PATCH  /api/books/:id                actualiza (parcial)
-DELETE /api/books/:id                borra (cascada a personajes)
+DELETE /api/books/:id                borra (cascada a personajes, capítulos y trama)
 ```
+
+`DELETE` recoge las `photoUrl` de los personajes del libro antes de borrar y
+limpia los ficheros después: la cascada de Postgres borra las filas, pero no
+toca `uploads/`.
 
 ### Personajes
 ```
@@ -266,6 +272,11 @@ sincronizar `position` con varias peticiones y a gestionar estados intermedios.
 POST   /api/characters/:id/relationships    crea
 DELETE /api/relationships/:id               borra
 ```
+
+`POST` acepta un `reciprocalType` opcional: si se envía, crea también la
+relación inversa (el personaje relacionado hacia este) con ese texto, en la
+misma transacción que la principal. Sin él, sólo se crea el sentido pedido —
+las relaciones siguen siendo dirigidas por defecto.
 
 ### Foto
 ```
@@ -324,11 +335,14 @@ react/src/
 ├── main.tsx, App.tsx
 ├── api/client.ts, hooks.ts    fetch envolviendo VITE_API_URL + hooks de react-query
 ├── lib/
-│   ├── useRoute.ts            router de hash propio, con guarda de navegación
-│   ├── useUnsavedChanges.ts   indicador + Ctrl+S + aviso al salir/navegar
-│   └── useOrderDraft.ts       borrador local para reordenar con ↑/↓
+│   ├── useRoute.ts            router de hash propio; navegar consulta saveStatus
+│   ├── saveStatus.ts          registro global de borradores sin guardar (multi-entrada)
+│   ├── useUnsavedChanges.ts   registra un borrador (dirty/saving/save) en saveStatus
+│   ├── useSaveStatus.ts       hook de lectura de saveStatus (useSyncExternalStore)
+│   └── useOrderDraft.ts       borrador local para reordenar con ↑/↓, con dirty derivado
 ├── components/
 │   ├── BookSelector.tsx       desplegable de libro activo
+│   ├── SaveIndicator.tsx      "Todo guardado"/"Guardar" en la cabecera; Ctrl+S y beforeunload
 │   └── ui.tsx                 Modal, ConfirmDialog, Section, Prose, Spinner, ErrorBanner…
 ├── tabs/
 │   ├── characters/            Personajes: lista, ficha, formulario, foto, arco, relaciones
@@ -336,16 +350,19 @@ react/src/
 │   │   ├── ChaptersTab.tsx, ChapterForm.tsx, ChapterDetail.tsx
 │   │   ├── ChapterCastEditor.tsx      quién sale y qué hace
 │   │   └── ChapterTextPanels.tsx      los dos paneles, guardado explícito
-│   └── plot/                   Trama: línea de sucesos y promesas
-│       ├── PlotTab.tsx, PlotTimeline.tsx, PlotEventForm.tsx
-│       └── PromisesPanel.tsx, PromiseForm.tsx
+│   ├── plot/                   Trama: línea de sucesos y promesas
+│   │   ├── PlotTab.tsx, PlotTimeline.tsx, PlotEventForm.tsx
+│   │   └── PromisesPanel.tsx, PromiseForm.tsx
+│   └── books/                   Libros: alta, edición y borrado
+│       ├── BooksTab.tsx          lista simple (sin maestro-detalle)
+│       └── BookForm.tsx
 └── types.ts
 ```
 
 ### Layout
-Cabecera con el selector de libro, debajo las tres tabs. La tab activa vive en
-la URL (router de hash propio, no react-router) para que recargar no pierda el
-sitio.
+Cabecera con el selector de libro, debajo las cuatro tabs. La tab activa vive
+en la URL (router de hash propio, no react-router) para que recargar no pierda
+el sitio.
 
 Personajes y Capítulos son **maestro-detalle**, con la clase CSS compartida
 `.master-detail`: lista a la izquierda, ficha del seleccionado a la derecha. En
@@ -360,6 +377,12 @@ Descripción física · Personalidad · Historia previa · Trama personal · Arc
 ### Ficha de capítulo
 Secciones plegables: Sinopsis · Reparto (quién sale y qué hace, editado como el
 arco de personaje) · Texto (los dos paneles, abierta por defecto) · Notas.
+
+### Tab de Libros
+Lista plana (no maestro-detalle: no hace falta una ficha aparte para tres
+campos). Cada fila tiene Editar y Borrar; el libro activo lleva un badge. El
+alta rápida del `BookSelector` de la cabecera sigue existiendo aparte — ver
+CLAUDE.md.
 
 ### Tab de Trama
 Dos columnas: la línea de tiempo de sucesos a la izquierda (con badges de qué
@@ -378,11 +401,20 @@ activo (persistido en `localStorage`). **No añadir Redux ni Zustand.**
 autor debe poder esbozar un personaje o un capítulo y rellenarlo más tarde.
 
 Guardado explícito con botón, no autoguardado. En campos de texto largos el
-autoguardado dispara escrituras a media frase y complica el "deshacer". Los
-paneles de texto del capítulo, que además pueden tardar en escribirse, añaden
-un indicador de "cambios sin guardar", el atajo Ctrl/Cmd+S y un aviso
-(`window.confirm`) antes de navegar a otro capítulo o tab, o de cerrar la
-pestaña, si hay algo sin guardar.
+autoguardado dispara escrituras a media frase y complica el "deshacer". Todo
+editor con un borrador local (paneles de texto del capítulo, reparto, arco de
+personaje, reordenamientos de capítulos/sucesos) se registra con
+`useUnsavedChanges` en `saveStatus.ts`, un registro global multi-entrada — no
+un singleton, porque el reparto y el texto de un mismo capítulo pueden estar
+sucios los dos a la vez en la misma pantalla. A partir de ahí, tres cosas
+combinan todas las entradas registradas:
+
+- El indicador `SaveIndicator` en la cabecera ("Todo guardado" / "Cambios sin
+  guardar" + botón), visible en cualquier tab.
+- Ctrl/Cmd+S y el aviso al cerrar la pestaña (`beforeunload`), escuchados una
+  sola vez en `SaveIndicator`, no uno por editor.
+- El aviso (`window.confirm`) antes de navegar a otro capítulo, personaje o
+  tab, resuelto en `useRoute.ts` contra el mismo registro.
 
 ---
 

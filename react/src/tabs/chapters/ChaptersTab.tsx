@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useChapters, useCreateChapter, useReorderChapters } from '../../api/hooks';
 import { ErrorBanner, Spinner } from '../../components/ui';
 import { useOrderDraft } from '../../lib/useOrderDraft';
+import { useUnsavedChanges } from '../../lib/useUnsavedChanges';
 import type { ChapterSummary } from '../../types';
 import { ChapterDetail } from './ChapterDetail';
 import { ChapterForm } from './ChapterForm';
@@ -45,6 +46,12 @@ export function ChaptersTab({
   const [creating, setCreating] = useState(false);
   const order = useOrderDraft(chapters ?? []);
 
+  const saveOrder = async () => {
+    await reorder.mutateAsync(order.ids);
+    order.cancel();
+  };
+  useUnsavedChanges({ dirty: order.dirty, saving: reorder.isPending, onSave: saveOrder });
+
   if (!bookId) {
     return (
       <div className="placeholder">
@@ -60,11 +67,6 @@ export function ChaptersTab({
   const list = chapters ?? [];
   // En móvil sólo cabe un panel: la lista o la ficha. Lo decide el CSS.
   const view = chapterId ? 'detail' : 'list';
-
-  const saveOrder = async () => {
-    await reorder.mutateAsync(order.ids);
-    order.cancel();
-  };
 
   return (
     <div className="master-detail" data-view={view}>

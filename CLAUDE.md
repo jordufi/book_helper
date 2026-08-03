@@ -14,8 +14,8 @@ UI y commits. Mantenerlo.
 `api/` y `react/` están implementados y verificados. `react-native/` se deja
 **vacío a propósito**: no crear nada dentro.
 
-Dentro de `react/`, las **tres tabs** están implementadas: Personajes, Capítulos
-y Trama.
+Dentro de `react/`, las **cuatro tabs** están implementadas: Trama, Personajes,
+Capítulos y Libros (gestión: alta, edición y borrado).
 
 ## Comandos
 
@@ -108,8 +108,12 @@ que devolvió Prisma. Así el cliente puede reemplazar su caché sin refetch.
 | `src/tabs/characters/` | Personajes: lista, ficha, formulario, foto, arco, relaciones |
 | `src/tabs/chapters/` | Capítulos: lista, ficha, reparto, los dos paneles de texto |
 | `src/tabs/plot/` | Trama: línea de sucesos y panel de promesas |
-| `src/lib/useUnsavedChanges.ts` | Indicador de cambios sin guardar + Ctrl+S + aviso al salir/navegar |
-| `src/lib/useOrderDraft.ts` | Borrador local para reordenar una lista con ↑/↓ (capítulos, sucesos) |
+| `src/tabs/books/` | Libros: alta, edición y borrado (lista simple, sin maestro-detalle) |
+| `src/lib/saveStatus.ts` | Registro global de borradores sin guardar (multi-entrada) + `confirmDiscardUnsaved` |
+| `src/lib/useUnsavedChanges.ts` | Registra un borrador (dirty/saving/save) en `saveStatus.ts` |
+| `src/lib/useSaveStatus.ts` | Hook de lectura de `saveStatus.ts` (`useSyncExternalStore`) |
+| `src/components/SaveIndicator.tsx` | Indicador "Todo guardado"/"Guardar" de la cabecera; único sitio que escucha Ctrl+S y `beforeunload` |
+| `src/lib/useOrderDraft.ts` | Borrador local para reordenar una lista con ↑/↓ (capítulos, sucesos), con `dirty` derivado |
 
 El estado del servidor lo lleva **react-query**; el único estado global propio
 es el libro activo. No introducir Redux ni Zustand.
@@ -131,8 +135,14 @@ El layout maestro-detalle (Personajes, Capítulos) usa la clase compartida
   etapa. La `position` se deriva del índice del array, así que el orden que envía
   el cliente es la verdad. Va en transacción para no borrar el arco si falla el
   alta.
-- **Las relaciones son dirigidas y no recíprocas.** A puede ver a B como "mentor"
-  mientras B ve a A como "estorbo". No añadir creación automática de la inversa.
+- **Las relaciones son dirigidas y no recíprocas por defecto.** A puede ver a B
+  como "mentor" mientras B ve a A como "estorbo" (o no tener ninguna relación
+  de vuelta). La inversa **no se crea sola**: hay que pedirla explícitamente
+  con `reciprocalType` en `POST /:id/relationships` (checkbox "Añadir también
+  la relación inversa" en `RelationshipEditor.tsx`), y con su propio texto —
+  "hermano" desde un lado puede ser "hermana" desde el otro. Las dos altas van
+  en una única transacción: si la inversa choca con una relación ya existente
+  (`P2002`), tampoco se crea la primera.
 - **Al reemplazar una foto, el fichero viejo se borra *después* de confirmar el
   nuevo en BD** (`api/src/routes/characters.ts`). Invertir el orden deja al
   personaje apuntando a un fichero inexistente si falla la escritura.
@@ -178,10 +188,38 @@ El layout maestro-detalle (Personajes, Capítulos) usa la clase compartida
   (`['books', bookId, 'plot']`) y las mutaciones devuelven `{ events, promises }`
   enteros, porque borrar un suceso puede arrastrar promesas (cascade en la
   siembra) y dejar otras pendientes (set null en el pago) a la vez.
-- **El aviso de "cambios sin guardar" (`useUnsavedChanges` + `setNavigationGuard`
-  en `useRoute.ts`) cubre la navegación interna y el cierre de pestaña, no el
-  botón Atrás del navegador.** Interceptar `hashchange` llega cuando el cambio
-  ya ha ocurrido; revertirlo ensuciaría el historial. No merece la pena.
+- **El aviso de "cambios sin guardar" cubre la navegación interna y el cierre
+  de pestaña, no el botón Atrás del navegador.** Interceptar `hashchange`
+  llega cuando el cambio ya ha ocurrido; revertirlo ensuciaría el historial.
+  No merece la pena.
+- **`saveStatus.ts` es un registro *multi-entrada*, no el singleton que fue al
+  principio.** Un mismo capítulo tiene a la vez el reparto (`ChapterCastEditor`)
+  y el texto (`ChapterTextPanels`) como borradores independientes en la misma
+  pantalla; un singleton (`guard` en `useRoute.ts`, ya retirado) sólo puede
+  recordar el último que se registró y el otro se pierde en silencio. Cada
+  `useUnsavedChanges` se registra con un `Symbol` propio; el indicador,
+  `confirmDiscardUnsaved` y `Ctrl+S` combinan todas las entradas (dirty si
+  *alguna* lo está, guardar afecta a *todas* las que estén sucias). El
+  `beforeunload` y el listener de teclado ahora viven en un único sitio
+  (`SaveIndicator`), no uno por editor — antes, con varios editores abiertos a
+  la vez, cada uno habría disparado su propio guardado con el mismo Ctrl+S.
+- **`ArcEditor`, `ChapterCastEditor` y los reordenamientos (`useOrderDraft`)
+  también están registrados en `saveStatus`**, no sólo el texto de capítulos:
+  todos tienen un modo edición con borrador local y botón Guardar, así que
+  cerrar el portátil a mitad de cualquiera de ellos también debía avisar. El
+  `dirty` de cada uno se calcula comparando el borrador contra los datos del
+  servidor (no basta con "estoy en modo edición"): entrar a editar sin cambiar
+  nada no debe marcar el libro como sucio.
+- **Hay dos sitios para crear un libro: el `+ Libro` del `BookSelector` en la
+  cabecera (alta rápida con título y autor) y la tab Libros (alta completa con
+  sinopsis, más edición y borrado).** Duplicidad intencional: el selector debe
+  seguir permitiendo crear sin cambiar de tab mientras se trabaja en otra cosa.
+  No fusionarlos en un único componente.
+- **`DELETE /api/books/:id` recoge las `photoUrl` de los personajes del libro
+  *antes* de borrar y las limpia *después*** (`api/src/routes/books.ts`), igual
+  que al borrar un personaje suelto. Sin esto, borrar un libro dejaba las
+  fotos huérfanas en `uploads/characters/` para siempre — la cascada de la BD
+  no toca el sistema de ficheros.
 
 ## Red y acceso desde el móvil
 

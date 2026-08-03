@@ -28,8 +28,32 @@ export const useBooks = () =>
 export function useCreateBook() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { title: string; author?: string | null }) =>
+    mutationFn: (body: { title: string; author?: string | null; synopsis?: string | null }) =>
       api.post<Book>('/api/books', body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.books }),
+  });
+}
+
+export function useUpdateBook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      ...body
+    }: {
+      id: string;
+      title?: string;
+      author?: string | null;
+      synopsis?: string | null;
+    }) => api.patch<Book>(`/api/books/${id}`, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.books }),
+  });
+}
+
+export function useDeleteBook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<void>(`/api/books/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.books }),
   });
 }
@@ -89,12 +113,31 @@ export const useSaveArc = (bookId: string | null) =>
     bookId,
   );
 
-export const useAddRelationship = (bookId: string | null) =>
-  useCharacterMutation(
-    ({ id, ...body }: { id: string; relatedCharacterId: string; type: string }) =>
+interface AddRelationshipArgs {
+  id: string;
+  relatedCharacterId: string;
+  type: string;
+  description?: string | null;
+  /** Opt-in: si se envía, la API crea también la relación inversa. */
+  reciprocalType?: string | null;
+}
+
+export function useAddRelationship(bookId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: AddRelationshipArgs) =>
       api.post<Character>(`/api/characters/${id}/relationships`, body),
-    bookId,
-  );
+    onSuccess: (character, variables) => {
+      qc.setQueryData(keys.character(character.id), character);
+      if (bookId) qc.invalidateQueries({ queryKey: keys.characters(bookId) });
+      // Si se creó también la inversa, la ficha del otro personaje puede
+      // estar en caché con datos obsoletos.
+      if (variables.reciprocalType) {
+        qc.invalidateQueries({ queryKey: keys.character(variables.relatedCharacterId) });
+      }
+    },
+  });
+}
 
 export const useUploadPhoto = (bookId: string | null) =>
   useCharacterMutation(

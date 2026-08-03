@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
+import { confirmDiscardUnsaved } from './saveStatus';
 
-export const TABS = ['trama', 'personajes', 'capitulos'] as const;
+export const TABS = ['trama', 'personajes', 'capitulos', 'libros'] as const;
 export type TabId = (typeof TABS)[number];
 
 export const TAB_LABELS: Record<TabId, string> = {
   trama: 'Trama',
   personajes: 'Personajes',
   capitulos: 'Capítulos',
+  libros: 'Libros',
 };
 
 export interface Route {
@@ -31,22 +33,6 @@ function parse(hash: string): Route {
 
 const build = ({ tab, itemId }: Route) => `#/${tab}${itemId ? `/${itemId}` : ''}`;
 
-type Guard = () => boolean;
-let guard: Guard | null = null;
-
-/**
- * Registra una confirmación previa a cualquier cambio de ruta interno (p.ej.
- * "hay cambios sin guardar, ¿descartarlos?"). A nivel de módulo y no de
- * Context: sólo puede haber un editor con guarda abierto a la vez, y un
- * Context obligaría a envolver toda la app para una funcionalidad de un
- * componente. No cubre el botón Atrás del navegador ni la edición manual del
- * hash: `hashchange` llega cuando el cambio ya ha ocurrido, y revertirlo
- * ensuciaría el historial.
- */
-export function setNavigationGuard(next: Guard | null) {
-  guard = next;
-}
-
 /**
  * Router mínimo basado en hash. Sustituye a react-router por dos motivos: la
  * necesidad real es tres tabs y un id, y react-router-dom no funciona en React
@@ -64,8 +50,13 @@ export function useRoute(): [Route, (next: Partial<Route>) => void] {
     return () => window.removeEventListener('hashchange', onChange);
   }, []);
 
+  // confirmDiscardUnsaved cubre la navegación interna (tabs, seleccionar otro
+  // elemento) y, junto al listener de beforeunload en SaveIndicator, el
+  // cierre de pestaña. No cubre el botón Atrás del navegador: `hashchange`
+  // llega cuando el cambio ya ha ocurrido, y revertirlo ensuciaría el
+  // historial.
   const navigate = useCallback((next: Partial<Route>) => {
-    if (guard && !guard()) return;
+    if (!confirmDiscardUnsaved()) return;
     setRoute((current) => {
       const merged = { ...current, ...next };
       // Cambiar de tab descarta el elemento seleccionado, si no la URL

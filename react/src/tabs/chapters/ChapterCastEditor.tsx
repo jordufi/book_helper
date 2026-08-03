@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { fileUrl } from '../../api/client';
 import { useSaveChapterCast } from '../../api/hooks';
 import { Avatar, ErrorBanner, Prose } from '../../components/ui';
+import { useUnsavedChanges } from '../../lib/useUnsavedChanges';
 import { ROLE_LABELS, type Chapter, type CharacterSummary } from '../../types';
 
 interface Draft {
@@ -58,6 +59,10 @@ export function ChapterCastEditor({
     await save.mutateAsync({ id: chapter.id, cast });
     setEditing(false);
   };
+
+  const original: Draft[] = chapter.cast.map((entry) => ({ characterId: entry.characterId, action: entry.action ?? '' }));
+  const dirty = editing && JSON.stringify(draft) !== JSON.stringify(original);
+  useUnsavedChanges({ dirty, saving: save.isPending, onSave: submit });
 
   const options = candidates.filter((c) => !draft.some((e) => e.characterId === c.id));
 

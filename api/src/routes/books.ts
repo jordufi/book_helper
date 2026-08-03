@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { asyncHandler, notFound } from '../lib/http.js';
 import { bookCreateSchema, bookUpdateSchema } from '../lib/schemas.js';
+import { deletePhotoFile } from '../lib/upload.js';
 
 export const booksRouter = Router();
 
@@ -10,7 +11,7 @@ booksRouter.get(
   asyncHandler(async (_req, res) => {
     const books = await prisma.book.findMany({
       orderBy: { updatedAt: 'desc' },
-      include: { _count: { select: { characters: true } } },
+      include: { _count: { select: { characters: true, chapters: true, plotEvents: true } } },
     });
     res.json(books);
   }),
@@ -46,7 +47,18 @@ booksRouter.patch(
 booksRouter.delete(
   '/:id',
   asyncHandler(async (req, res) => {
+    // La cascada de la BD borra los personajes, pero no sus ficheros de foto:
+    // hay que recogerlos antes de borrar y limpiarlos después, igual que al
+    // borrar un personaje suelto.
+    const characters = await prisma.character.findMany({
+      where: { bookId: req.params.id },
+      select: { photoUrl: true },
+    });
+
     await prisma.book.delete({ where: { id: req.params.id } });
+
+    for (const character of characters) deletePhotoFile(character.photoUrl);
+
     res.status(204).end();
   }),
 );

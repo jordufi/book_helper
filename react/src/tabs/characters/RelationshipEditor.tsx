@@ -18,6 +18,8 @@ export function RelationshipEditor({
   const [adding, setAdding] = useState(false);
   const [relatedId, setRelatedId] = useState('');
   const [type, setType] = useState('');
+  const [reciprocal, setReciprocal] = useState(false);
+  const [reciprocalType, setReciprocalType] = useState('');
 
   const add = useAddRelationship(bookId);
   const remove = useDeleteRelationship(bookId, character.id);
@@ -25,12 +27,22 @@ export function RelationshipEditor({
   // Uno mismo nunca es candidato; el resto sí, aunque ya exista otra relación
   // con él (A puede ser a la vez "hermano" y "rival" de B).
   const options = candidates.filter((c) => c.id !== character.id);
+  const relatedName = options.find((c) => c.id === relatedId)?.name;
+
+  const canSubmit = Boolean(relatedId && type.trim() && (!reciprocal || reciprocalType.trim()));
 
   const submit = async () => {
-    if (!relatedId || !type.trim()) return;
-    await add.mutateAsync({ id: character.id, relatedCharacterId: relatedId, type: type.trim() });
+    if (!canSubmit) return;
+    await add.mutateAsync({
+      id: character.id,
+      relatedCharacterId: relatedId,
+      type: type.trim(),
+      reciprocalType: reciprocal ? reciprocalType.trim() : null,
+    });
     setRelatedId('');
     setType('');
+    setReciprocal(false);
+    setReciprocalType('');
     setAdding(false);
   };
 
@@ -94,19 +106,42 @@ export function RelationshipEditor({
                 placeholder="hermano, rival, mentor"
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && submit()}
+                onKeyDown={(e) => e.key === 'Enter' && !reciprocal && submit()}
               />
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, fontSize: '0.85rem' }}>
+            <input
+              type="checkbox"
+              checked={reciprocal}
+              onChange={(e) => setReciprocal(e.target.checked)}
+            />
+            Añadir también la relación inversa
+          </label>
+
+          {reciprocal && (
+            <div className="field" style={{ marginTop: 6 }}>
+              <label htmlFor="rel-reciprocal-type">
+                Cómo {relatedName ? `te ve ${relatedName}` : 'te ve él/ella'}
+                <span className="hint"> — puede ser un texto distinto, p.ej. "hermana"</span>
+              </label>
+              <input
+                id="rel-reciprocal-type"
+                className="input"
+                placeholder="hermana, discípulo, enemiga"
+                value={reciprocalType}
+                onChange={(e) => setReciprocalType(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && submit()}
+              />
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', marginTop: 6 }}>
             <button className="btn btn-sm" onClick={() => setAdding(false)}>
               Cancelar
             </button>
-            <button
-              className="btn btn-sm btn-primary"
-              onClick={submit}
-              disabled={!relatedId || !type.trim() || add.isPending}
-            >
+            <button className="btn btn-sm btn-primary" onClick={submit} disabled={!canSubmit || add.isPending}>
               {add.isPending ? 'Añadiendo…' : 'Añadir'}
             </button>
           </div>

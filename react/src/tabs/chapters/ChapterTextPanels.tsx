@@ -56,11 +56,7 @@ export function ChapterTextPanels({ chapter, bookId }: { chapter: Chapter; bookI
     await update.mutateAsync({ id: chapter.id, ...patch });
   };
 
-  useUnsavedChanges({
-    dirty,
-    onSave: save,
-    message: 'Hay cambios sin guardar en el texto del capítulo. ¿Descartarlos?',
-  });
+  useUnsavedChanges({ dirty, saving: update.isPending, onSave: save });
 
   return (
     <>

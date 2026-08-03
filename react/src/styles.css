@@ -73,6 +73,19 @@ input, textarea, select { font: inherit; color: inherit; }
 }
 .brand span { color: var(--accent); }
 
+.save-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+.save-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex-shrink: 0; }
+.save-indicator[data-state='dirty'] .save-dot,
+.save-indicator[data-state='saving'] .save-dot { background: var(--accent); }
+.save-indicator[data-state='dirty'] { color: var(--text); }
+
 .tabs { display: flex; gap: 4px; padding: 0 20px; background: var(--surface); border-bottom: 1px solid var(--border); }
 
 .tab {

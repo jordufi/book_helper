@@ -15,7 +15,7 @@ export interface Book {
   synopsis: string | null;
   createdAt: string;
   updatedAt: string;
-  _count?: { characters: number };
+  _count?: { characters: number; chapters: number; plotEvents: number };
 }
 
 /** Versión ligera que devuelve la lista de un libro. */

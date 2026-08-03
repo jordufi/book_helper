@@ -6,10 +6,12 @@ import { useState } from 'react';
  */
 export function useOrderDraft<T extends { id: string }>(items: T[]) {
   const [reordering, setReordering] = useState(false);
+  const [original, setOriginal] = useState<string[]>([]);
   const [draft, setDraft] = useState<T[]>([]);
 
   const start = () => {
     setDraft(items);
+    setOriginal(items.map((i) => i.id));
     setReordering(true);
   };
 
@@ -24,5 +26,10 @@ export function useOrderDraft<T extends { id: string }>(items: T[]) {
       return next;
     });
 
-  return { reordering, draft, ids: draft.map((d) => d.id), start, cancel, move };
+  const ids = draft.map((d) => d.id);
+  // Sólo cuenta como cambio real si el orden difiere del que había al
+  // empezar a reordenar, no por el mero hecho de haber entrado en modo edición.
+  const dirty = reordering && ids.some((id, i) => id !== original[i]);
+
+  return { reordering, draft, ids, dirty, start, cancel, move };
 }

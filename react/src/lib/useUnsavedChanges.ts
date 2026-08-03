@@ -1,47 +1,28 @@
-import { useEffect, useRef } from 'react';
-import { setNavigationGuard } from './useRoute';
+import { useEffect, useRef, useState } from 'react';
+import { registerSaveStatus, unregisterSaveStatus } from './saveStatus';
 
 /**
- * Junta las tres piezas de "guardado explícito con aviso": bloquear la
- * navegación interna (tabs, selección de otro elemento), avisar al cerrar la
- * pestaña, y guardar con Ctrl/Cmd+S. No cubre el botón Atrás del navegador
- * (ver el comentario de setNavigationGuard en useRoute.ts).
+ * Registra un borrador con cambios sin guardar en el estado global de
+ * guardado (indicador de la cabecera, aviso al navegar/cerrar la pestaña,
+ * Ctrl/Cmd+S — todo eso vive en saveStatus.ts y en SaveIndicator, no aquí).
+ * Puede haber varios editores registrados a la vez: se combinan, no se pisan.
  */
 export function useUnsavedChanges(opts: {
   dirty: boolean;
+  saving?: boolean;
   onSave: () => void | Promise<void>;
-  message?: string;
 }) {
-  const { dirty, message = 'Hay cambios sin guardar. ¿Descartarlos?' } = opts;
+  const { dirty, saving = false } = opts;
 
-  // onSave cambia de identidad en cada render; si el listener de teclado
-  // dependiera de ella directamente, se re-registraría continuamente.
+  // onSave cambia de identidad en cada render; si el registro dependiera de
+  // ella directamente, se re-registraría sin necesidad en cada render.
   const onSaveRef = useRef(opts.onSave);
   onSaveRef.current = opts.onSave;
 
-  useEffect(() => {
-    setNavigationGuard(() => !dirty || window.confirm(message));
-    return () => setNavigationGuard(null);
-  }, [dirty, message]);
+  const [id] = useState(() => Symbol('unsaved-changes'));
 
   useEffect(() => {
-    if (!dirty) return;
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = '';
-    };
-    window.addEventListener('beforeunload', onBeforeUnload);
-    return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [dirty]);
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        if (dirty) void onSaveRef.current();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [dirty]);
+    registerSaveStatus(id, { dirty, saving, save: () => onSaveRef.current() });
+    return () => unregisterSaveStatus(id);
+  }, [id, dirty, saving]);
 }

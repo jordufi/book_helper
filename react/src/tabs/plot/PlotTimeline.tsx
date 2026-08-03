@@ -7,6 +7,7 @@ import {
 } from '../../api/hooks';
 import { ConfirmDialog, ErrorBanner } from '../../components/ui';
 import { useOrderDraft } from '../../lib/useOrderDraft';
+import { useUnsavedChanges } from '../../lib/useUnsavedChanges';
 import type { Plot, PlotEvent } from '../../types';
 import { PlotEventForm } from './PlotEventForm';
 
@@ -45,6 +46,7 @@ export function PlotTimeline({ plot, bookId }: { plot: Plot; bookId: string | nu
     await reorder.mutateAsync(order.ids);
     order.cancel();
   };
+  useUnsavedChanges({ dirty: order.dirty, saving: reorder.isPending, onSave: saveOrder });
 
   return (
     <div>

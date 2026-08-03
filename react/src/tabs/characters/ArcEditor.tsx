@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSaveArc } from '../../api/hooks';
 import { ErrorBanner } from '../../components/ui';
+import { useUnsavedChanges } from '../../lib/useUnsavedChanges';
 import type { Character } from '../../types';
 
 interface Draft {
@@ -49,6 +50,10 @@ export function ArcEditor({ character, bookId }: { character: Character; bookId:
     await save.mutateAsync({ id: character.id, stages });
     setEditing(false);
   };
+
+  const original: Draft[] = character.arcStages.map((s) => ({ title: s.title, description: s.description ?? '' }));
+  const dirty = editing && JSON.stringify(draft) !== JSON.stringify(original);
+  useUnsavedChanges({ dirty, saving: save.isPending, onSave: submit });
 
   if (!editing) {
     return (

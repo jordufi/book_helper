@@ -1,7 +1,9 @@
 import { BookSelector } from './components/BookSelector';
+import { SaveIndicator } from './components/SaveIndicator';
 import { ErrorBanner, Spinner } from './components/ui';
 import { TABS, TAB_LABELS, useRoute } from './lib/useRoute';
 import { useActiveBook } from './state/useActiveBook';
+import { BooksTab } from './tabs/books/BooksTab';
 import { CharactersTab } from './tabs/characters/CharactersTab';
 import { ChaptersTab } from './tabs/chapters/ChaptersTab';
 import { PlotTab } from './tabs/plot/PlotTab';
@@ -17,6 +19,7 @@ export default function App() {
           Book<span>Helper</span>
         </div>
         <BookSelector books={books} bookId={bookId} onSelect={setBookId} />
+        <SaveIndicator />
       </header>
 
       <nav className="tabs" role="tablist">
@@ -50,8 +53,10 @@ export default function App() {
             chapterId={route.itemId}
             onSelect={(itemId) => navigate({ itemId })}
           />
-        ) : (
+        ) : route.tab === 'trama' ? (
           <PlotTab bookId={bookId} />
+        ) : (
+          <BooksTab books={books} activeBookId={bookId} />
         )}
       </main>
     </div>
