@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
+import { assertBookExists, lockBookOrThrow } from '../lib/books.js';
 import { HttpError, asyncHandler, notFound } from '../lib/http.js';
 import {
   plotEventCreateSchema,
@@ -54,6 +55,7 @@ bookPlotRouter.get(
   '/',
   asyncHandler(async (req, res) => {
     const { bookId } = req.params as { bookId: string };
+    await assertBookExists(bookId);
     res.json(await loadPlot(bookId));
   }),
 );
@@ -64,16 +66,20 @@ bookPlotRouter.post(
     const { bookId } = req.params as { bookId: string };
     const data = plotEventCreateSchema.parse(req.body);
 
-    const book = await prisma.book.findUnique({ where: { id: bookId }, select: { id: true } });
-    if (!book) throw notFound('Libro');
+    // Leer el máximo y crear tiene que ser atómico: ver lockBookOrThrow.
+    await prisma.$transaction(async (tx) => {
+      await lockBookOrThrow(tx, bookId);
 
-    const { _max } = await prisma.plotEvent.aggregate({
-      where: { bookId },
-      _max: { position: true },
+      const { _max } = await tx.plotEvent.aggregate({
+        where: { bookId },
+        _max: { position: true },
+      });
+
+      await tx.plotEvent.create({
+        data: { ...data, bookId, position: (_max.position ?? -1) + 1 },
+      });
     });
-    const position = (_max.position ?? -1) + 1;
 
-    await prisma.plotEvent.create({ data: { ...data, bookId, position } });
     res.status(201).json(await loadPlot(bookId));
   }),
 );
@@ -84,6 +90,7 @@ bookPlotRouter.put(
   asyncHandler(async (req, res) => {
     const { bookId } = req.params as { bookId: string };
     const { ids } = plotEventOrderSchema.parse(req.body);
+    await assertBookExists(bookId);
 
     const current = await prisma.plotEvent.findMany({ where: { bookId }, select: { id: true } });
     const currentIds = new Set(current.map((e) => e.id));
@@ -106,9 +113,7 @@ bookPlotRouter.post(
   asyncHandler(async (req, res) => {
     const { bookId } = req.params as { bookId: string };
     const data = plotPromiseCreateSchema.parse(req.body);
-
-    const book = await prisma.book.findUnique({ where: { id: bookId }, select: { id: true } });
-    if (!book) throw notFound('Libro');
+    await assertBookExists(bookId);
 
     await assertEventsBelongToBook(
       bookId,

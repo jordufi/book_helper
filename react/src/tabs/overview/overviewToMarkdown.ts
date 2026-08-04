@@ -1,18 +1,5 @@
 import { ROLE_LABELS, type Book, type ChapterSummary, type CharacterSummary, type PlotEvent, type PlotPromise } from '../../types';
 
-/** Nombre de fichero a partir del título: sin acentos, minúsculas, con guiones. */
-export function slugify(text: string): string {
-  const DIACRITICS = new RegExp('[\\u0300-\\u036f]', 'g');
-  const slug = text
-    .normalize('NFD')
-    .replace(DIACRITICS, '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return slug || 'libro';
-}
-
 /**
  * Convierte a Markdown exactamente lo que se ve en la tab Libro: trama,
  * personajes y capítulos, con los mismos campos y el mismo orden. No añade

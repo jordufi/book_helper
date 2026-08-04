@@ -1,17 +1,48 @@
-import { useState } from 'react';
-import { useCreateBook, useDeleteBook, useUpdateBook } from '../../api/hooks';
+import { useRef, useState } from 'react';
+import {
+  useCreateBook,
+  useDeleteBook,
+  useExportBook,
+  useImportBook,
+  useUpdateBook,
+} from '../../api/hooks';
 import { ConfirmDialog, ErrorBanner } from '../../components/ui';
 import type { Book } from '../../types';
 import { BookForm } from './BookForm';
 
-export function BooksTab({ books, activeBookId }: { books: Book[]; activeBookId: string | null }) {
+export function BooksTab({
+  books,
+  activeBookId,
+  onImported,
+}: {
+  books: Book[];
+  activeBookId: string | null;
+  onImported: (bookId: string) => void;
+}) {
   const create = useCreateBook();
   const update = useUpdateBook();
   const remove = useDeleteBook();
+  const exportBook = useExportBook();
+  const importBook = useImportBook();
 
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Book | null>(null);
   const [confirming, setConfirming] = useState<Book | null>(null);
+  const [importError, setImportError] = useState<unknown>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportFile = async (file: File) => {
+    setImportError(null);
+    try {
+      const parsed: unknown = JSON.parse(await file.text());
+      const book = await importBook.mutateAsync(parsed);
+      onImported(book.id);
+    } catch (err) {
+      setImportError(
+        err instanceof SyntaxError ? new Error('El fichero no es un JSON válido') : err,
+      );
+    }
+  };
 
   return (
     <div>
@@ -20,12 +51,32 @@ export function BooksTab({ books, activeBookId }: { books: Book[]; activeBookId:
         <span className="grid-count">
           {books.length} {books.length === 1 ? 'libro' : 'libros'}
         </span>
-        <button className="btn btn-sm btn-primary" onClick={() => setCreating(true)}>
-          + Libro
-        </button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json"
+            hidden
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (file) void handleImportFile(file);
+            }}
+          />
+          <button
+            className="btn btn-sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importBook.isPending}
+          >
+            {importBook.isPending ? 'Importando…' : 'Importar libro (JSON)'}
+          </button>
+          <button className="btn btn-sm btn-primary" onClick={() => setCreating(true)}>
+            + Libro
+          </button>
+        </div>
       </div>
 
-      <ErrorBanner error={create.error ?? update.error ?? remove.error} />
+      <ErrorBanner error={create.error ?? update.error ?? remove.error ?? exportBook.error ?? importError} />
 
       {books.length === 0 ? (
         <p className="empty-note">Todavía no hay libros. Crea el primero para empezar.</p>
@@ -48,6 +99,13 @@ export function BooksTab({ books, activeBookId }: { books: Book[]; activeBookId:
                   {b._count?.chapters ?? 0} {b._count?.chapters === 1 ? 'capítulo' : 'capítulos'}
                 </div>
               </div>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => exportBook.mutate(b)}
+                disabled={exportBook.isPending}
+              >
+                Exportar JSON
+              </button>
               <button className="btn btn-ghost btn-sm" onClick={() => setEditing(b)}>
                 Editar
               </button>

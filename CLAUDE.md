@@ -107,12 +107,13 @@ que devolvió Prisma. Así el cliente puede reemplazar su caché sin refetch.
 | `src/state/useActiveBook.ts` | Libro activo, persistido en `localStorage` |
 | `src/api/client.ts` | `fetch` envuelto; traduce errores de red y de zod |
 | `src/api/hooks.ts` | Todos los hooks de react-query, con las claves de caché |
+| *(API)* `src/lib/books.ts` | `assertBookExists` (404 si no existe) y `lockBookOrThrow` (lock de fila para el cálculo atómico de `position`) |
 | `src/tabs/overview/` | Libro: resumen de sólo lectura de trama + personajes + capítulos, reutiliza los mismos hooks/caché que esas tabs; exporta a Markdown |
 | `src/lib/downloadFile.ts` | Dispara la descarga de un fichero de texto generado en el cliente (`Blob` + `<a download>`) |
 | `src/tabs/characters/` | Personajes: lista, ficha, formulario, foto, arco, relaciones |
 | `src/tabs/chapters/` | Capítulos: lista, ficha, reparto, los dos paneles de texto |
 | `src/tabs/plot/` | Trama: línea de sucesos y panel de promesas |
-| `src/tabs/books/` | Gestión de libros: alta, edición y borrado (lista simple, sin maestro-detalle). No está en la barra de tabs — ver `NAV_TABS` |
+| `src/tabs/books/` | Gestión de libros: alta, edición, borrado, exportar/importar JSON (lista simple, sin maestro-detalle). No está en la barra de tabs — ver `NAV_TABS` |
 | `src/lib/saveStatus.ts` | Registro global de borradores sin guardar (multi-entrada) + `confirmDiscardUnsaved` |
 | `src/lib/useUnsavedChanges.ts` | Registra un borrador (dirty/saving/save) en `saveStatus.ts` |
 | `src/lib/useSaveStatus.ts` | Hook de lectura de `saveStatus.ts` (`useSyncExternalStore`) |
@@ -175,6 +176,26 @@ El layout maestro-detalle (Personajes, Capítulos) usa la clase compartida
 - **No hay `@@unique([book_id, position])`** en `chapters` ni en `plot_events`.
   Reordenar en transacción pasa por estados con posiciones repetidas. El orden
   lo garantiza el endpoint `PUT .../order`, que exige la lista completa de ids.
+- **El alta de capítulo y de suceso va dentro de `prisma.$transaction` con un
+  `SELECT ... FOR UPDATE` sobre la fila del libro** (`lockBookOrThrow`, en
+  `api/src/lib/books.ts`). No es paranoia: sin el lock, cuatro altas
+  simultáneas en el mismo libro crean cuatro filas con la **misma**
+  `position` — reproducido, no teórico. En READ COMMITTED cada transacción lee
+  el mismo `MAX(position)` porque no ve las filas aún sin confirmar de las
+  otras, así que un `INSERT ... SELECT MAX(position)+1` en una sola sentencia
+  **tampoco** bastaría. Y como (por lo de arriba) no hay unique que lo frene,
+  la BD acepta las duplicadas y `ORDER BY position` pasa a dar un orden no
+  determinista: la lista se reordena sola entre recargas. Importa porque la
+  app se usa desde el portátil y el móvil a la vez. El lock serializa sólo las
+  altas del mismo libro, que es el alcance exacto en el que compiten.
+- **`books.id` es `TEXT`, no `uuid`** (Prisma mapea así `String @id`). En el
+  SQL crudo de `lockBookOrThrow` no se puede castear a `::uuid`: fallaría en
+  cada llamada.
+- **Las rutas anidadas bajo `/books/:bookId` comprueban que el libro exista
+  (`assertBookExists`), también las de sólo lectura.** Antes los `GET`
+  devolvían `200 []` para un libro inexistente, que le dice al cliente "el
+  libro está vacío" cuando la verdad es "no existe" — y encima era incoherente
+  con los `POST`, que sí daban 404.
 - **`setup_event_id` es CASCADE y `payoff_event_id` es SET NULL** en
   `plot_promises`. Borrar el suceso donde se paga devuelve la promesa a
   "pendiente", que es información útil; borrar el de la siembra la deja sin
@@ -233,6 +254,42 @@ El layout maestro-detalle (Personajes, Capítulos) usa la clase compartida
   exactamente los mismos campos que se ven en pantalla — ni más (nada de
   personalidad, backstory o texto de capítulos) ni menos —, porque el botón
   exporta "esto", no una ficha completa del libro.
+- **Exportar/importar libro completo (JSON) sí tiene endpoints propios**
+  (`GET /api/books/:id/export`, `POST /api/books/import`), a diferencia del
+  Markdown: aquí el propósito es llevarse el libro entero a otro sistema —
+  con el texto real de los capítulos, la personalidad y el backstory de cada
+  personaje, todo — así que hace falta leer de la BD, no de lo que ya está en
+  caché en el cliente.
+  - **Sin fotos, a propósito** (por eso lo pidió el usuario): `photoUrl` no
+    sale en el export. Las fotos son ficheros en `./uploads/characters`, no
+    datos portables en un JSON; incluir la imagen habría significado
+    base64 o un `.zip`, que es justo la complejidad que no se quería.
+  - **El export conserva los ids reales de personajes y sucesos**, pero sólo
+    para que relaciones, reparto y promesas puedan referenciarse entre sí
+    *dentro del propio fichero*. El import los descarta enteros y genera ids
+    nuevos, remapeando esas referencias con un `Map<idViejo, idNuevo>` — así
+    que reimportar el mismo fichero dos veces no colisiona con nada, sólo
+    crea dos libros distintos.
+  - **El import siempre crea un libro NUEVO**, nunca sobrescribe uno
+    existente ni admite "importar dentro de" un libro ya creado. Evita toda
+    la complejidad de fusionar/deduplicar contra datos que ya estaban ahí.
+  - **Todo el import va en una única transacción** (`prisma.$transaction`),
+    personajes → arco + relaciones → capítulos → reparto → sucesos →
+    promesas, en ese orden porque cada paso necesita el mapa de ids del
+    anterior (una relación puede apuntar a cualquier personaje del libro, no
+    sólo a los ya creados, así que las relaciones se crean en una segunda
+    pasada una vez existen todos los personajes).
+  - **Las relaciones y el reparto se deduplican en memoria antes de
+    `createMany`, no con `try/catch` alrededor de cada insert.** Si un insert
+    dentro de una transacción de Postgres viola una restricción `@@unique`,
+    Postgres marca la transacción entera como abortada — atraparlo en JS no
+    la revive, así que todo el import fallaría a la primera relación
+    duplicada del JSON. Filtrar antes evita que eso pase.
+  - **Una referencia rota en el JSON (un `relatedCharacterId` o
+    `setupEventId` que no aparece en el propio fichero) se descarta en
+    silencio, no aborta el import.** Es un fichero externo, potencialmente
+    editado a mano; fallar todo el import por una fila suelta sería peor que
+    perder esa única relación o promesa.
 - **La gestión de libros (`BooksTab`) no está en la barra de tabs.** Es una
   ruta más (`#/libros`, sigue en `TABS` en `useRoute.ts` para que el router la
   reconozca), pero `NAV_TABS` la excluye de la barra de navegación: se llega

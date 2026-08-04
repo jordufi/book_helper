@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './client';
+import { downloadTextFile, slugify } from '../lib/downloadFile';
 import type {
   Book,
   Chapter,
@@ -54,6 +55,25 @@ export function useDeleteBook() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.delete<void>(`/api/books/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.books }),
+  });
+}
+
+/** Descarga el volcado JSON de un libro (sin fotos) generado por la API. */
+export function useExportBook() {
+  return useMutation({
+    mutationFn: async (book: Book) => {
+      const data = await api.get<unknown>(`/api/books/${book.id}/export`);
+      downloadTextFile(`${slugify(book.title)}.json`, JSON.stringify(data, null, 2), 'application/json');
+    },
+  });
+}
+
+/** Crea un libro NUEVO a partir de un JSON exportado con useExportBook. */
+export function useImportBook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: unknown) => api.post<Book>('/api/books/import', payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.books }),
   });
 }

@@ -64,7 +64,7 @@ export default function App() {
         ) : route.tab === 'trama' ? (
           <PlotTab bookId={bookId} />
         ) : (
-          <BooksTab books={books} activeBookId={bookId} />
+          <BooksTab books={books} activeBookId={bookId} onImported={setBookId} />
         )}
       </main>
     </div>

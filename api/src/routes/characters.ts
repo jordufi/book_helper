@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
+import { assertBookExists } from '../lib/books.js';
 import { HttpError, asyncHandler, notFound } from '../lib/http.js';
 import {
   arcStagesSchema,
@@ -36,6 +37,7 @@ bookCharactersRouter.get(
   '/',
   asyncHandler(async (req, res) => {
     const { bookId } = req.params as { bookId: string };
+    await assertBookExists(bookId);
 
     // Versión ligera, sin arco ni relaciones: alimenta una cuadrícula de tarjetas.
     const characters = await prisma.character.findMany({
@@ -60,9 +62,7 @@ bookCharactersRouter.post(
   asyncHandler(async (req, res) => {
     const { bookId } = req.params as { bookId: string };
     const data = characterCreateSchema.parse(req.body);
-
-    const book = await prisma.book.findUnique({ where: { id: bookId }, select: { id: true } });
-    if (!book) throw notFound('Libro');
+    await assertBookExists(bookId);
 
     const character = await prisma.character.create({
       data: { ...data, bookId },

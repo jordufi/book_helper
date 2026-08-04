@@ -157,3 +157,99 @@ export const plotPromiseUpdateSchema = z.object({
   // pendiente. Es justo la distinción que necesita "desmarcar como pagada".
   payoffEventId: z.string().uuid('Id de suceso inválido').nullable().optional(),
 });
+
+// --- Import/export de libro completo ------------------------------------------
+
+/**
+ * Id *dentro del fichero*, no de la BD: sólo sirve para que relaciones,
+ * reparto y promesas se referencien entre sí en el mismo JSON exportado. No
+ * hace falta que sea un uuid — al importar se descarta entero y se generan
+ * ids nuevos, remapeando estas referencias.
+ */
+const localId = z.string().min(1).max(200);
+
+const arcStageImportSchema = z.object({
+  title: z.string().trim().min(1, 'La etapa necesita un título').max(200),
+  description: longText,
+});
+
+const relationshipImportSchema = z.object({
+  relatedCharacterId: localId,
+  type: z.string().trim().min(1, 'Indica el tipo de relación').max(100),
+  description: longText,
+});
+
+const characterImportSchema = z.object({
+  id: localId,
+  name: z.string().trim().min(1, 'El nombre no puede estar vacío').max(200),
+  role: z.enum(characterRoles).default('SECONDARY'),
+  age: z.string().trim().max(100).nullish().transform((v) => v || null),
+  physicalDescription: longText,
+  personality: longText,
+  backstory: longText,
+  personalPlot: longText,
+  arcSummary: longText,
+  notes: longText,
+  arcStages: z.array(arcStageImportSchema).max(100).default([]),
+  relationships: z.array(relationshipImportSchema).max(500).default([]),
+});
+
+const chapterCastImportSchema = z.object({
+  characterId: localId,
+  action: longText,
+});
+
+const chapterImportSchema = z.object({
+  id: localId,
+  title: z.string().trim().min(1, 'El capítulo necesita un título').max(200),
+  synopsis: longText,
+  notes: longText,
+  textALabel: z.string().trim().min(1).max(60).default('Borrador'),
+  textBLabel: z.string().trim().min(1).max(60).default('Reescritura'),
+  textA: z
+    .string()
+    .max(CHAPTER_TEXT_MAX)
+    .nullish()
+    .transform((v) => (v?.trim() ? v : null)),
+  textB: z
+    .string()
+    .max(CHAPTER_TEXT_MAX)
+    .nullish()
+    .transform((v) => (v?.trim() ? v : null)),
+  cast: z.array(chapterCastImportSchema).max(100).default([]),
+});
+
+const plotEventImportSchema = z.object({
+  id: localId,
+  title: z.string().trim().min(1, 'El suceso necesita un título').max(200),
+  description: longText,
+});
+
+const plotPromiseImportSchema = z.object({
+  title: z.string().trim().min(1, 'La promesa necesita un título').max(200),
+  description: longText,
+  setupEventId: localId,
+  payoffEventId: localId.nullish().transform((v) => v ?? null),
+});
+
+/**
+ * Sin fotos a propósito (ver CLAUDE.md): son ficheros en ./uploads, no datos
+ * portables en un JSON. `book`, `characters`, `chapters` y `plot` con
+ * `.default([])`/objeto por defecto para que un JSON parcial (p.ej. sólo
+ * personajes) no rompa la validación.
+ */
+export const bookImportSchema = z.object({
+  book: z.object({
+    title: z.string().trim().min(1, 'El título no puede estar vacío').max(200),
+    author: z.string().trim().max(200).nullish().transform((v) => v || null),
+    synopsis: longText,
+  }),
+  characters: z.array(characterImportSchema).max(500).default([]),
+  chapters: z.array(chapterImportSchema).max(1000).default([]),
+  plot: z
+    .object({
+      events: z.array(plotEventImportSchema).max(1000).default([]),
+      promises: z.array(plotPromiseImportSchema).max(1000).default([]),
+    })
+    .default({ events: [], promises: [] }),
+});

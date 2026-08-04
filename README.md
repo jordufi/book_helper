@@ -46,6 +46,13 @@ sus personajes, capítulos y trama (la app avisa antes). No es una tab más:
 las tabs (Trama, Personajes, Capítulos) son para el trabajo diario dentro de
 un libro; gestionar libros es otra cosa.
 
+Desde ahí también se exporta e importa un libro entero como JSON (botón
+"Exportar JSON" en cada fila, "Importar libro (JSON)" arriba): sirve para
+llevarse un libro completo —personajes, capítulos con su texto, trama— a otro
+ordenador o a otra instalación de la app. No incluye las fotos de los
+personajes (son ficheros aparte en `./uploads/characters`). Importar siempre
+crea un libro **nuevo**; nunca sobrescribe uno existente.
+
 ## Stack
 
 React + Vite · Express + Prisma (TypeScript) · PostgreSQL 16 en Docker

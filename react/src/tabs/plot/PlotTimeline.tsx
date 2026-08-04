@@ -11,6 +11,12 @@ import { useUnsavedChanges } from '../../lib/useUnsavedChanges';
 import type { Plot, PlotEvent } from '../../types';
 import { PlotEventForm } from './PlotEventForm';
 
+/** Promesa reducida a lo que necesita un badge de la línea de tiempo. */
+interface PromiseBadge {
+  id: string;
+  title: string;
+}
+
 export function PlotTimeline({ plot, bookId }: { plot: Plot; bookId: string | null }) {
   const create = useCreatePlotEvent(bookId);
   const update = useUpdatePlotEvent(bookId);
@@ -22,16 +28,18 @@ export function PlotTimeline({ plot, bookId }: { plot: Plot; bookId: string | nu
   const [editing, setEditing] = useState<PlotEvent | null>(null);
   const [confirming, setConfirming] = useState<PlotEvent | null>(null);
 
-  // Por suceso: qué promesas se siembran ahí y cuáles se pagan ahí.
+  // Por suceso: qué promesas se siembran ahí y cuáles se pagan ahí. Se guarda
+  // el id además del título porque el título NO es único —dos promesas pueden
+  // llamarse igual— y es lo que se usa como key de React.
   const promisesByEvent = useMemo(() => {
-    const map = new Map<string, { seeds: string[]; payoffs: string[] }>();
+    const map = new Map<string, { seeds: PromiseBadge[]; payoffs: PromiseBadge[] }>();
     const entry = (id: string) => {
       if (!map.has(id)) map.set(id, { seeds: [], payoffs: [] });
       return map.get(id)!;
     };
     for (const p of plot.promises) {
-      entry(p.setupEventId).seeds.push(p.title);
-      if (p.payoffEventId) entry(p.payoffEventId).payoffs.push(p.title);
+      entry(p.setupEventId).seeds.push({ id: p.id, title: p.title });
+      if (p.payoffEventId) entry(p.payoffEventId).payoffs.push({ id: p.id, title: p.title });
     }
     return map;
   }, [plot.promises]);
@@ -120,14 +128,14 @@ export function PlotTimeline({ plot, bookId }: { plot: Plot; bookId: string | nu
                   {e.description && <div className="prose">{e.description}</div>}
                   {badges && (badges.seeds.length > 0 || badges.payoffs.length > 0) && (
                     <div className="event-promises">
-                      {badges.seeds.map((title) => (
-                        <span key={`seed-${title}`} className="badge badge-pending">
-                          siembra: {title}
+                      {badges.seeds.map((p) => (
+                        <span key={`seed-${p.id}`} className="badge badge-pending">
+                          siembra: {p.title}
                         </span>
                       ))}
-                      {badges.payoffs.map((title) => (
-                        <span key={`payoff-${title}`} className="badge badge-paid">
-                          paga: {title}
+                      {badges.payoffs.map((p) => (
+                        <span key={`payoff-${p.id}`} className="badge badge-paid">
+                          paga: {p.title}
                         </span>
                       ))}
                     </div>

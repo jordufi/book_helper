@@ -233,7 +233,9 @@ HTTP correcto y `{ "error": "mensaje" }`.
 ```
 GET    /api/books                    lista, con recuento de personajes/capítulos/sucesos
 POST   /api/books                    crea
+POST   /api/books/import             crea un libro NUEVO a partir de un JSON exportado
 GET    /api/books/:id                detalle
+GET    /api/books/:id/export         vuelca el libro entero a JSON (sin fotos)
 PATCH  /api/books/:id                actualiza (parcial)
 DELETE /api/books/:id                borra (cascada a personajes, capítulos y trama)
 ```
@@ -241,6 +243,34 @@ DELETE /api/books/:id                borra (cascada a personajes, capítulos y t
 `DELETE` recoge las `photoUrl` de los personajes del libro antes de borrar y
 limpia los ficheros después: la cascada de Postgres borra las filas, pero no
 toca `uploads/`.
+
+Todas las rutas anidadas bajo `/books/:bookId` —incluidas las de sólo
+lectura— comprueban primero que el libro exista y devuelven 404 si no
+(`assertBookExists`). Devolver `200 []` confundiría "el libro no existe" con
+"el libro está vacío".
+
+El alta de capítulo y de suceso, además, se hace dentro de una transacción que
+empieza bloqueando la fila del libro (`lockBookOrThrow`: `SELECT id FROM books
+WHERE id = $1 FOR UPDATE`). Es lo que hace atómico el cálculo de `position`;
+sin ello dos altas simultáneas en el mismo libro reciben la misma posición y,
+al no haber `@@unique([book_id, position])`, la BD las acepta y el orden de la
+lista deja de ser determinista.
+
+`GET /:id/export` lee de la BD (no de caché) y devuelve personajes, capítulos
+—con su texto— y trama completos, sin `photoUrl`: las fotos son ficheros en
+`uploads/`, no datos portables en un JSON. Conserva los ids reales de
+personajes y sucesos sólo para que relaciones/reparto/promesas se
+referencien entre sí *dentro del propio fichero*.
+
+`POST /import` valida ese JSON con zod y, en una única transacción, crea un
+libro nuevo con ids nuevos para todo, remapeando esas referencias con
+`Map<idDelFichero, idNuevo>`. Nunca sobrescribe un libro existente. El orden
+importa: personajes antes que sus relaciones (una relación puede apuntar a
+cualquier personaje del libro, no sólo a los ya creados), sucesos antes que
+promesas. Relaciones y reparto se deduplican en JS antes de `createMany` —
+un `try/catch` alrededor de un insert que viola `@@unique` no sirve dentro de
+una transacción de Postgres, porque la transacción entera queda abortada en
+cuanto el primer insert falla, se atrape o no en JS.
 
 ### Personajes
 ```
@@ -398,11 +428,20 @@ arco de personaje) · Texto (los dos paneles, abierta por defecto) · Notas.
 
 ### Gestión de libros
 Lista plana (no maestro-detalle: no hace falta una ficha aparte para tres
-campos). Cada fila tiene Editar y Borrar; el libro activo lleva un badge. Es
-la ruta `#/libros`, pero no aparece en la barra de tabs: se llega con
-"Gestionar libros" en la cabecera, junto al selector de libro. El alta rápida
-del `BookSelector` (sólo título y autor) sigue existiendo aparte — ver
-CLAUDE.md.
+campos). Cada fila tiene Exportar JSON, Editar y Borrar; el libro activo
+lleva un badge. Es la ruta `#/libros`, pero no aparece en la barra de tabs:
+se llega con "Gestionar libros" en la cabecera, junto al selector de libro.
+El alta rápida del `BookSelector` (sólo título y autor) sigue existiendo
+aparte — ver CLAUDE.md.
+
+"Importar libro (JSON)", en la cabecera de esta tab, abre un `<input
+type="file" hidden>` (sin componente de subida propio: un input nativo con
+`accept="application/json"` basta). El fichero se lee con `file.text()` +
+`JSON.parse` en el cliente y se manda tal cual a `POST /api/books/import` —
+la validación de verdad la hace zod en la API, el cliente sólo distingue un
+JSON malformado (`SyntaxError`) de un rechazo de la API. Al importar, el
+libro nuevo queda activo (`onImported` → `setBookId`), para no obligar a
+buscarlo en el desplegable.
 
 ### Tab de Trama
 Dos columnas: la línea de tiempo de sucesos a la izquierda (con badges de qué

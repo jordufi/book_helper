@@ -9,3 +9,16 @@ export function downloadTextFile(filename: string, content: string, mime = 'text
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+/** Nombre de fichero a partir de un título: sin acentos, minúsculas, con guiones. */
+export function slugify(text: string): string {
+  const DIACRITICS = new RegExp('[\\u0300-\\u036f]', 'g');
+  const slug = text
+    .normalize('NFD')
+    .replace(DIACRITICS, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || 'libro';
+}

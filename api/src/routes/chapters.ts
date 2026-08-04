@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
+import { assertBookExists, lockBookOrThrow } from '../lib/books.js';
 import { HttpError, asyncHandler, notFound } from '../lib/http.js';
 import {
   chapterCastSchema,
@@ -42,6 +43,8 @@ bookChaptersRouter.get(
   '/',
   asyncHandler(async (req, res) => {
     const { bookId } = req.params as { bookId: string };
+    await assertBookExists(bookId);
+
     const chapters = await prisma.chapter.findMany({
       where: { bookId },
       orderBy: { position: 'asc' },
@@ -57,20 +60,22 @@ bookChaptersRouter.post(
     const { bookId } = req.params as { bookId: string };
     const data = chapterCreateSchema.parse(req.body);
 
-    const book = await prisma.book.findUnique({ where: { id: bookId }, select: { id: true } });
-    if (!book) throw notFound('Libro');
+    // Leer el máximo y crear tiene que ser atómico: ver lockBookOrThrow.
+    const chapter = await prisma.$transaction(async (tx) => {
+      await lockBookOrThrow(tx, bookId);
 
-    // _max y no count: los borrados dejan huecos en la numeración.
-    const { _max } = await prisma.chapter.aggregate({
-      where: { bookId },
-      _max: { position: true },
-    });
-    const position = (_max.position ?? -1) + 1;
+      // _max y no count: los borrados dejan huecos en la numeración.
+      const { _max } = await tx.chapter.aggregate({
+        where: { bookId },
+        _max: { position: true },
+      });
 
-    const chapter = await prisma.chapter.create({
-      data: { ...data, bookId, position },
-      include: chapterDetailInclude,
+      return tx.chapter.create({
+        data: { ...data, bookId, position: (_max.position ?? -1) + 1 },
+        include: chapterDetailInclude,
+      });
     });
+
     res.status(201).json(chapter);
   }),
 );
@@ -86,6 +91,7 @@ bookChaptersRouter.put(
   asyncHandler(async (req, res) => {
     const { bookId } = req.params as { bookId: string };
     const { ids } = chapterOrderSchema.parse(req.body);
+    await assertBookExists(bookId);
 
     const current = await prisma.chapter.findMany({ where: { bookId }, select: { id: true } });
     const currentIds = new Set(current.map((c) => c.id));

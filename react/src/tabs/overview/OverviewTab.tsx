@@ -2,9 +2,15 @@ import { useMemo } from 'react';
 import { fileUrl } from '../../api/client';
 import { useCharacters, useChapters, usePlot } from '../../api/hooks';
 import { Avatar, ErrorBanner, Section, Spinner } from '../../components/ui';
-import { downloadTextFile } from '../../lib/downloadFile';
+import { downloadTextFile, slugify } from '../../lib/downloadFile';
 import { ROLE_LABELS, type Book } from '../../types';
-import { overviewToMarkdown, slugify } from './overviewToMarkdown';
+import { overviewToMarkdown } from './overviewToMarkdown';
+
+/** Promesa reducida a lo que necesita un badge de la línea de tiempo. */
+interface PromiseBadge {
+  id: string;
+  title: string;
+}
 
 /**
  * Resumen de sólo lectura del libro entero: trama, personajes y capítulos en
@@ -18,16 +24,17 @@ export function OverviewTab({ bookId, book }: { bookId: string | null; book: Boo
   const plot = usePlot(bookId);
 
   // Por suceso: qué promesas se siembran ahí y cuáles se pagan ahí. Mismo
-  // cálculo que PlotTimeline, pero aquí es sólo lectura.
+  // cálculo que PlotTimeline, pero aquí es sólo lectura. Se guarda el id
+  // además del título porque el título NO es único y es la key de React.
   const promisesByEvent = useMemo(() => {
-    const map = new Map<string, { seeds: string[]; payoffs: string[] }>();
+    const map = new Map<string, { seeds: PromiseBadge[]; payoffs: PromiseBadge[] }>();
     const entry = (id: string) => {
       if (!map.has(id)) map.set(id, { seeds: [], payoffs: [] });
       return map.get(id)!;
     };
     for (const p of plot.data?.promises ?? []) {
-      entry(p.setupEventId).seeds.push(p.title);
-      if (p.payoffEventId) entry(p.payoffEventId).payoffs.push(p.title);
+      entry(p.setupEventId).seeds.push({ id: p.id, title: p.title });
+      if (p.payoffEventId) entry(p.payoffEventId).payoffs.push({ id: p.id, title: p.title });
     }
     return map;
   }, [plot.data?.promises]);
@@ -84,14 +91,14 @@ export function OverviewTab({ bookId, book }: { bookId: string | null; book: Boo
                       {e.description && <div className="prose">{e.description}</div>}
                       {badges && (badges.seeds.length > 0 || badges.payoffs.length > 0) && (
                         <div className="event-promises">
-                          {badges.seeds.map((title) => (
-                            <span key={`seed-${title}`} className="badge badge-pending">
-                              siembra: {title}
+                          {badges.seeds.map((p) => (
+                            <span key={`seed-${p.id}`} className="badge badge-pending">
+                              siembra: {p.title}
                             </span>
                           ))}
-                          {badges.payoffs.map((title) => (
-                            <span key={`payoff-${title}`} className="badge badge-paid">
-                              paga: {title}
+                          {badges.payoffs.map((p) => (
+                            <span key={`payoff-${p.id}`} className="badge badge-paid">
+                              paga: {p.title}
                             </span>
                           ))}
                         </div>
