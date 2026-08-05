@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FlatList, View } from 'react-native';
 import {
   Button,
@@ -31,6 +31,14 @@ export function ChaptersScreen({ navigation }: ChaptersListProps) {
   const [title, setTitle] = useState('');
   const [synopsis, setSynopsis] = useState('');
   const [order, setOrder] = useState<ChapterSummary[] | null>(null);
+
+  // La pantalla no se desmonta al cambiar de libro (las pestañas se quedan
+  // montadas), así que un reordenamiento a medias sobreviviría al cambio: la
+  // lista mostrada sería la del libro anterior y "Guardar orden" mandaría ids
+  // que no son los del libro activo. Se descarta el borrador.
+  useEffect(() => {
+    setOrder(null);
+  }, [bookId]);
 
   if (!bookId) {
     return (

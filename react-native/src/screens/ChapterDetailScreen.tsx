@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Alert, View } from 'react-native';
 import {
   Avatar,
@@ -27,7 +27,6 @@ import {
   useSaveCast,
   useUpdateChapter,
 } from '../data/hooks';
-import { useActiveBook } from '../state/useActiveBook';
 import { UnsavedChangesGuard, useReportUnsaved } from '../lib/unsavedChanges';
 import type { ChapterDetailProps } from '../navigation';
 import type { Chapter, ChapterPatch, CharacterSummary } from '../types';
@@ -91,6 +90,14 @@ function ChapterTextPanels({ chapter, bookId }: { chapter: Chapter; bookId: stri
   const label = isA ? draft.textALabel : draft.textBLabel;
   const value = isA ? draft.textA : draft.textB;
 
+  // El recuento recorre el texto ENTERO, que aquí puede ser un capítulo de
+  // cientos de KB. Hacerlo en cada pulsación se nota al escribir, así que se
+  // calcula sobre un valor diferido: React pinta primero la tecla y recalcula
+  // cuando hay hueco. El número va un instante por detrás mientras se escribe
+  // seguido, que es exactamente el compromiso que queremos.
+  const deferredValue = useDeferredValue(value);
+  const words = useMemo(() => wordCount(deferredValue), [deferredValue]);
+
   return (
     <>
       <ErrorBanner error={update.error} />
@@ -118,7 +125,7 @@ function ChapterTextPanels({ chapter, bookId }: { chapter: Chapter; bookId: stri
         placeholder="Escribe aquí el capítulo…"
         style={{ minHeight: 260 }}
       />
-      <Subtle>{wordCount(value)} palabras</Subtle>
+      <Subtle>{words} palabras</Subtle>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         {dirty && <Badge label="Cambios sin guardar" tone="accent" />}
@@ -260,8 +267,13 @@ function ChapterCastEditor({
 
 export function ChapterDetailScreen({ route, navigation }: ChapterDetailProps) {
   const { chapterId } = route.params;
-  const { bookId } = useActiveBook();
   const { data: chapter, isLoading, error } = useChapter(chapterId);
+  // El libro sale del PROPIO capítulo, no del libro activo. La ficha no se
+  // desmonta al cambiar de libro desde la pestaña Libros: con el libro activo,
+  // el reparto pasaría a ofrecer los personajes del libro nuevo y guardar
+  // fallaría con "Los personajes deben pertenecer al libro del capítulo".
+  // `null` mientras carga; los hooks que dependen de él ya lo contemplan.
+  const bookId = chapter?.bookId ?? null;
   const { data: characters } = useCharacters(bookId);
   const update = useUpdateChapter(bookId);
   const remove = useDeleteChapter(bookId);

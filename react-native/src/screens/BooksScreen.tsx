@@ -137,8 +137,14 @@ export function BooksScreen() {
   const handleImport = async () => {
     setTransferError(null);
     try {
+      // Tres tipos, no sólo 'application/json': en Android el MIME lo pone el
+      // proveedor del fichero, y un .json llegado por correo, Drive o el
+      // gestor de archivos se anuncia a menudo como 'text/plain' o
+      // 'application/octet-stream'. Con el filtro estricto esos ficheros salen
+      // en gris y no hay forma de elegirlos. Aceptarlos no relaja nada: lo que
+      // valida de verdad es el JSON.parse y el schema de zod del import.
       const picked = await DocumentPicker.getDocumentAsync({
-        type: 'application/json',
+        type: ['application/json', 'text/plain', 'application/octet-stream'],
         copyToCacheDirectory: true,
       });
       if (picked.canceled || !picked.assets?.[0]) return;

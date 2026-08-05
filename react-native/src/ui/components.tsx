@@ -444,10 +444,13 @@ export function Sheet({
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       {/* Aquí sí va KeyboardAvoidingView y no automaticallyAdjustKeyboardInsets:
           dentro de un Modal no hay cabecera de navegación, así que el offset
-          es 0 y el cálculo es fiable. En Android `adjustResize` ya lo hace. */}
+          es 0 y el cálculo es fiable. Y hace falta también en Android: un
+          Modal transparent se dibuja en su propio Dialog/window, que NO
+          hereda el `adjustResize` de la Activity, así que sin `behavior` el
+          teclado tapa el Sheet en vez de encogerlo. */}
       <KeyboardAvoidingView
         style={styles.backdrop}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View
           style={{

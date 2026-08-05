@@ -32,6 +32,13 @@ generar una build de desarrollo o directamente el APK.
 
 ## Generar el APK (y iOS)
 
+`npx expo start` y `npm run android` (`expo run:android`) instalan una build
+de **desarrollo** (dev-client): necesitan Metro corriendo en el PC — mismo
+Wi-Fi o USB — para servir el bundle JS. Si abres la app sin el PC conectado
+sale "Unable to load script. Make sure you're running Metro...". Para usarla
+de forma **autónoma**, sin el PC al lado, hace falta un APK **release**, con
+una de las dos opciones de abajo.
+
 ### Opción A — EAS Build (en la nube, sin instalar nada)
 
 No hace falta Android SDK ni un Mac. Necesita una cuenta gratuita de Expo.
@@ -55,8 +62,13 @@ Requiere JDK 17+ y Android Studio con el SDK (unos 10 GB).
 
 ```bash
 npx expo prebuild          # genera android/ e ios/
-npx expo run:android       # compila e instala en el dispositivo conectado
+npm run android:release    # compila un APK release e instala en el dispositivo conectado
 ```
+
+`npm run android:release` (`expo run:android --variant release`) es la
+versión **release** de `npm run android`: no lleva dev-client, así que el APK
+resultante no necesita Metro ni el PC para abrirse. `npm run android` a secas
+sigue siendo el comando de desarrollo (build debug + dev-client).
 
 `android/` e `ios/` están en `.gitignore` a propósito: son artefactos
 regenerables, no fuente.
@@ -118,6 +130,19 @@ src/
 - **El libro activo va en un Context.** Las pestañas se quedan montadas, así
   que un `useState` por pantalla haría que cambiar de libro no llegase a las
   demás.
+- **Las fichas de detalle no miran el libro activo**, sino el `bookId` del
+  capítulo o del personaje que ya tienen cargado. Como la pantalla no se
+  desmonta, cambiar de libro con una ficha abierta la dejaría mostrando el
+  capítulo de un libro y ofreciendo los personajes de otro. Por lo mismo, las
+  listas descartan el borrador de reordenar al cambiar de libro.
+- **El recuento de palabras usa `useDeferredValue`**: recorre el texto entero y
+  hacerlo en cada tecla se nota con un capítulo largo. El número va un instante
+  por detrás mientras se escribe seguido.
+- **El selector de fichero del import acepta `text/plain` y
+  `application/octet-stream` además de `application/json`.** En Android el MIME
+  lo pone el proveedor del fichero y un `.json` rara vez llega anunciado como
+  tal; con el filtro estricto no se puede elegir. Lo que valida es el parseo,
+  no el filtro.
 - **El aviso de "cambios sin guardar" es `usePreventRemove`**, no un indicador
   en la cabecera como en la web. Cubre atrás, el gesto y el atrás de Android;
   no cubre cambiar de pestaña, porque ahí la pantalla no se desmonta y el

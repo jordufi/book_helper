@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, View } from 'react-native';
 import {
   Badge,
@@ -56,6 +56,16 @@ export function PlotScreen() {
   const [eventForm, setEventForm] = useState<{ event?: PlotEvent } | null>(null);
   const [promiseForm, setPromiseForm] = useState<{ promise?: PlotPromise } | null>(null);
   const [order, setOrder] = useState<PlotEvent[] | null>(null);
+
+  // La pantalla no se desmonta al cambiar de libro (las pestañas se quedan
+  // montadas), así que un reordenamiento a medias —o un formulario abierto
+  // sobre un suceso del libro anterior— sobreviviría al cambio y guardaría
+  // contra el libro equivocado. Se descarta todo lo que apunte al libro viejo.
+  useEffect(() => {
+    setOrder(null);
+    setEventForm(null);
+    setPromiseForm(null);
+  }, [bookId]);
 
   const promisesByEvent = useMemo(() => {
     const map = new Map<string, { seeds: PromiseBadge[]; payoffs: PromiseBadge[] }>();

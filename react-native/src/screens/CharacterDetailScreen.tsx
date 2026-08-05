@@ -29,7 +29,6 @@ import {
   useSaveArc,
   useUpdateCharacter,
 } from '../data/hooks';
-import { useActiveBook } from '../state/useActiveBook';
 import { UnsavedChangesGuard, useReportUnsaved } from '../lib/unsavedChanges';
 import type { CharacterDetailProps } from '../navigation';
 import { CHARACTER_ROLES, ROLE_LABELS, type Character, type CharacterRole } from '../types';
@@ -299,8 +298,13 @@ function RelationshipEditor({
 
 export function CharacterDetailScreen({ route, navigation }: CharacterDetailProps) {
   const { characterId } = route.params;
-  const { bookId } = useActiveBook();
   const { data: character, isLoading, error } = useCharacter(characterId);
+  // El libro sale del PROPIO personaje, no del libro activo. La ficha no se
+  // desmonta al cambiar de libro desde la pestaña Libros: con el libro activo,
+  // el selector de relaciones pasaría a ofrecer los personajes del libro nuevo
+  // y guardar fallaría con "Los dos personajes deben pertenecer al mismo
+  // libro". `null` mientras carga; los hooks ya lo contemplan.
+  const bookId = character?.bookId ?? null;
   const update = useUpdateCharacter(bookId);
   const remove = useDeleteCharacter(bookId);
   const [editing, setEditing] = useState(false);
