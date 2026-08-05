@@ -11,8 +11,11 @@ UI y commits. Mantenerlo.
 
 ## Estado
 
-`api/` y `react/` están implementados y verificados. `react-native/` se deja
-**vacío a propósito**: no crear nada dentro.
+`api/`, `react/` y `react-native/` están implementados y verificados.
+
+`react-native/` es una app **independiente**: guarda todo en SQLite dentro del
+teléfono, sin API ni red. No comparte código con `react/` (ver más abajo). Su
+propio [README](react-native/README.md) explica cómo sacar el APK.
 
 Dentro de `react/`, las cuatro tabs de trabajo diario están implementadas:
 Libro (resumen de sólo lectura), Trama, Personajes y Capítulos. La gestión de
@@ -36,6 +39,13 @@ cd react
 npm run dev                        # :5173, ya escucha en 0.0.0.0 (vite.config.ts)
 npm run build                      # tsc -b && vite build
 npm run typecheck
+
+cd react-native
+npx expo start                     # desarrollo
+npm run typecheck
+npx expo export --platform all     # bundlea Android+iOS: valida el grafo de imports
+npx expo-doctor                    # versiones del SDK y schema de app.json
+eas build --profile preview --platform android   # APK
 ```
 
 No hay suite de tests. La API se verifica con `curl` contra la BD real; el
@@ -302,6 +312,94 @@ El layout maestro-detalle (Personajes, Capítulos) usa la clase compartida
   que al borrar un personaje suelto. Sin esto, borrar un libro dejaba las
   fotos huérfanas en `uploads/characters/` para siempre — la cascada de la BD
   no toca el sistema de ficheros.
+
+## App móvil (`react-native/`)
+
+Expo SDK 57 + `expo-sqlite`. **No habla con `api/`**: los datos viven en el
+dispositivo. Decisiones propias que conviene no deshacer:
+
+- **No comparte código con `react/` a propósito.** Se duplican los tipos y el
+  schema zod del import. Un paquete compartido obligaría a montar workspaces
+  para tres ficheros, y los componentes no se pueden compartir de todas formas
+  (`<div>` vs `<View>`). Lo que **sí** está acoplado y debe seguir estándolo es
+  el **formato JSON** de export/import: es el puente entre las dos apps.
+- **`PRAGMA foreign_keys = ON` al abrir la BD** (`src/db/database.ts`). SQLite
+  las trae desactivadas por defecto; sin esa línea los `ON DELETE CASCADE` del
+  esquema son decorativos. Va fuera de transacción: dentro se ignora en silencio.
+- **`role` es TEXT con CHECK** (SQLite no tiene enums), así que la lista de
+  personajes ordena con un `CASE`: alfabéticamente saldría ANTAGONIST antes que
+  PROTAGONIST, distinto de la web.
+- **Todo lo que lee-y-luego-escribe usa `withExclusiveTransactionAsync`, no
+  `withTransactionAsync`.** La documentación de expo-sqlite es explícita: la
+  segunda **no aísla** y otras consultas async pueden colarse en medio. Sin
+  exclusiva, el `MAX(position)` + `INSERT` del alta de capítulo/suceso sufre
+  exactamente la misma carrera que se arregló en Postgres con el `FOR UPDATE`
+  (dos altas leen el mismo máximo → posiciones duplicadas → orden no
+  determinista). Aplica igual a `saveArc`/`saveCast` (entre el DELETE y los
+  INSERT la lista está vacía) y al import completo.
+  **Dentro de una transacción exclusiva hay que usar `txn.*`, nunca `db.*`**:
+  `db` va por fuera y se quedaría esperando a que la transacción termine.
+  La única excepción es la migración en `database.ts`, que no la necesita
+  porque `getDb()` memoriza la promesa de apertura y nadie recibe la conexión
+  hasta que acaba.
+- **`Section` oculta con `display: 'none'`; NUNCA desmonta a sus hijos.**
+  Dentro viven editores con borrador local (texto del capítulo, arco,
+  reparto), y en React Native un `{open && <View>{children}</View>}` los
+  desmonta y se lleva su `useState`: plegar "Texto" con texto sin guardar lo
+  destruiría. Y en silencio, porque al desmontarse el editor `useReportUnsaved`
+  hace su limpieza y desarma el aviso justo antes de perder los datos. En la
+  web no pasa porque plegar allí es CSS sobre un `<div>` sin estado. El flag
+  `mounted` sólo retrasa el PRIMER montaje (para `defaultOpen={false}`); una
+  vez abierta, la sección ya no se desmonta. Al ocultar hay que sacarla también
+  del árbol de accesibilidad, o el lector de pantalla lee campos invisibles.
+- **Hay dos selectores y no uno: `Choice` y `Select`** (`src/ui/components.tsx`).
+  `Choice` pinta un botón por opción — bien para rol (4) o el panel A/B (2), un
+  muro con 40 personajes. `Select` se despliega **en línea** con buscador, y es
+  en línea y no un modal a propósito: varios viven dentro de un `Sheet`, que ya
+  es un `Modal`, y anidar modales da problemas en ambas plataformas. Por lo
+  mismo su lista es un `ScrollView` acotado y no un `FlatList`: dentro de otro
+  scroll la virtualización avisa y va peor.
+- **Las fichas de detalle vuelven atrás solas si su elemento desaparece**
+  (`character === null`, `chapter === null`). Pasa al borrar el libro entero
+  desde otra pestaña: la cascada se lleva el elemento y la pantalla se quedaría
+  en un "no encontrado" sin salida. Se distingue `null` ("consultado y no
+  existe") de `undefined` ("todavía cargando"), que no debe disparar nada.
+- **El aviso de cambios sin guardar es `usePreventRemove`
+  (`src/lib/unsavedChanges.tsx`), no un indicador en la cabecera** como en la
+  web. Cubre el botón atrás, el gesto de deslizar y el atrás de Android. **No**
+  cubre cambiar de pestaña, y no hace falta: la pantalla no se desmonta, así
+  que el borrador sigue ahí. Es un registro de varias entradas por el mismo
+  motivo que `saveStatus.ts` en la web: una ficha de capítulo tiene a la vez el
+  texto y el reparto como borradores independientes.
+- **`ScreenScroll` usa `automaticallyAdjustKeyboardInsets` en vez de
+  `KeyboardAvoidingView`** (`src/ui/components.tsx`). El segundo necesitaría la
+  altura de la cabecera de navegación, y `useHeaderHeight` vive en
+  `@react-navigation/elements`, que aquí sólo es dependencia **transitiva** —
+  importarlo sería depender de un paquete que no declaramos. En el `Sheet` sí
+  se usa `KeyboardAvoidingView`, porque dentro de un `Modal` no hay cabecera y
+  el offset 0 es correcto.
+- **`keyboardShouldPersistTaps="handled"` en todos los scrolls con campos.**
+  Sin eso, con el teclado abierto el primer toque en "Guardar" sólo lo cierra y
+  hay que tocar dos veces.
+- **El libro activo vive en un Context (`ActiveBookProvider`), no en un hook
+  con `useState` suelto.** Las pantallas de las pestañas se quedan montadas al
+  cambiar de una a otra: si cada una tuviera su copia, cambiar de libro en
+  "Libros" no llegaría a las demás. `useActiveBook()` lanza un error si se usa
+  fuera del Provider, para que ese fallo sea ruidoso y no silencioso.
+- **Migraciones por `PRAGMA user_version`** (`src/db/schema.ts`). Para cambiar
+  el esquema se añade una entrada al final de `MIGRATIONS`; **nunca** se edita
+  una ya publicada, porque los dispositivos que la aplicaron no la repetirán.
+- **`transferSchema.ts` está separado de `transfer.ts`** para que la validación
+  no importe nada de Expo y se pueda ejecutar fuera del móvil. Es lo que
+  permite verificar con un script que un export real de la web sigue pasando la
+  validación del móvil.
+- **`expo-sqlite/kv-store` en vez de AsyncStorage** para el libro activo: misma
+  API, y ya tenemos expo-sqlite.
+- **Emoji como iconos de pestaña**, para no arrastrar una librería de iconos.
+- **`android/` e `ios/` están gitignored**: los genera `expo prebuild`, son
+  artefactos.
+- **`eas.json` fuerza `buildType: apk`** en los perfiles `preview` y
+  `production`. Por defecto EAS produce `.aab`, que no se instala en el móvil.
 
 ## Red y acceso desde el móvil
 

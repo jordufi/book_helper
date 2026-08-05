@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Book Helper",
+    "slug": "book-helper",
+    "version": "0.1.0",
+    "orientation": "default",
+    "scheme": "bookhelper",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.jordufi.bookhelper"
+    },
+    "android": {
+      "package": "com.jordufi.bookhelper",
+      "adaptiveIcon": {
+        "backgroundColor": "#8c5a3c"
+      }
+    },
+    "plugins": ["expo-sqlite"]
+  }
+}

@@ -12,7 +12,7 @@ El diseño completo está en [ARCHITECTURE.md](ARCHITECTURE.md).
 | Postgres + volumen persistente | ✅ funcionando |
 | `api/` (Express + Prisma) | ✅ funcionando |
 | `react/` — tabs Libro, Trama, Personajes, Capítulos + gestión de libros | ✅ funcionando |
-| `react-native/` | 🔮 futuro |
+| `react-native/` — app Android/iOS, datos en el propio móvil | ✅ funcionando |
 
 La tab de Libro es un resumen de sólo lectura: la trama, los personajes y los
 capítulos del libro activo en una sola pantalla, sin nada que editar. Sirve
@@ -53,9 +53,19 @@ ordenador o a otra instalación de la app. No incluye las fotos de los
 personajes (son ficheros aparte en `./uploads/characters`). Importar siempre
 crea un libro **nuevo**; nunca sobrescribe uno existente.
 
+## App móvil
+
+`react-native/` es la versión para Android e iOS, y funciona **sin servidor**:
+guarda todo en una SQLite dentro del propio teléfono, así que no necesita ni la
+API ni Postgres ni estar en la misma Wi-Fi. Los libros se pasan de una app a
+otra con el mismo export/import JSON.
+
+Instrucciones para generar el APK en [react-native/README.md](react-native/README.md).
+
 ## Stack
 
-React + Vite · Express + Prisma (TypeScript) · PostgreSQL 16 en Docker
+React + Vite · Express + Prisma (TypeScript) · PostgreSQL 16 en Docker ·
+Expo + expo-sqlite (móvil)
 
 ## Arranque
 
