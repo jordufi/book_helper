@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "book-helper",
+    "story-planner-jordufi": "story-planner-jordufi"
+  },
+  "targets": {},
+  "etags": {}
+}

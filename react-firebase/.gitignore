@@ -1,0 +1,3 @@
+# Caché local del CLI de Firebase — no se commitea, ya cubre node_modules/
+# y dist/ el .gitignore de la raíz.
+.firebase/

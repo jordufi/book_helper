@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { fileUrl } from '../../api/client';
 import { useCharacters, useChapters, useExportBook, usePlot } from '../../api/hooks';
 import { Avatar, ErrorBanner, Section, Spinner } from '../../components/ui';
 import { downloadTextFile, slugify } from '../../lib/downloadFile';
@@ -79,7 +78,7 @@ export function OverviewTab({ bookId, book }: { bookId: string | null; book: Boo
             onClick={() => book && exportBook.mutate(book)}
             disabled={!book || exportBook.isPending}
           >
-            {exportBook.isPending ? 'Descargando…' : 'Exportar JSON'}
+            {exportBook.isPending ? 'Descargando…' : 'Descargar libro (JSON)'}
           </button>
           <button className="btn btn-sm" onClick={exportMarkdown}>
             Exportar como Markdown
@@ -135,7 +134,7 @@ export function OverviewTab({ bookId, book }: { bookId: string | null; book: Boo
             <div className="card-list">
               {characterList.map((c) => (
                 <div className="list-card" key={c.id}>
-                  <Avatar src={fileUrl(c.photoUrl)} name={c.name} />
+                  <Avatar name={c.name} />
                   <div className="list-card-body">
                     <div className="list-card-title">{c.name}</div>
                     <div className="list-card-meta">

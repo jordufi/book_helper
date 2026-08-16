@@ -17,6 +17,13 @@ UI y commits. Mantenerlo.
 teléfono, sin API ni red. No comparte código con `react/` (ver más abajo). Su
 propio [README](react-native/README.md) explica cómo sacar el APK.
 
+`react-firebase/` es una tercera app, también independiente: mismo diseño e
+interfaz que `react/`, pero sin API ni Postgres detrás — los datos viven en
+IndexedDB en el navegador y se descargan/abren como JSON. Pensada para
+publicarse en Firebase Hosting con un dominio propio. Ver
+[la sección propia más abajo](#web-pública-react-firebase) y su
+[README](react-firebase/README.md).
+
 Dentro de `react/`, las cuatro tabs de trabajo diario están implementadas:
 Libro (resumen de sólo lectura), Trama, Personajes y Capítulos. La gestión de
 libros (alta completa, edición y borrado) no es una tab — se abre con
@@ -46,6 +53,12 @@ npm run typecheck
 npx expo export --platform all     # bundlea Android+iOS: valida el grafo de imports
 npx expo-doctor                    # versiones del SDK y schema de app.json
 eas build --profile preview --platform android   # APK
+
+cd react-firebase
+npm run dev                        # :5173, sin API ni Postgres detrás
+npm run typecheck
+npm run build                      # tsc -b && vite build -> dist/
+firebase deploy --only hosting     # requiere firebase-tools y `firebase use --add`
 ```
 
 No hay suite de tests. La API se verifica con `curl` contra la BD real; el
@@ -264,6 +277,12 @@ El layout maestro-detalle (Personajes, Capítulos) usa la clase compartida
   exactamente los mismos campos que se ven en pantalla — ni más (nada de
   personalidad, backstory o texto de capítulos) ni menos —, porque el botón
   exporta "esto", no una ficha completa del libro.
+- **La tab Libro también tiene un botón "Exportar JSON"** (`useExportBook`),
+  junto al de Markdown. No contradice el punto anterior de "sólo lectura": es
+  una exportación, no una edición — no crea, borra ni modifica nada, ni abre
+  ningún formulario. Es un atajo al mismo `GET /:id/export` que ya usaba
+  "Gestionar libros" (mismo hook, mismo fichero resultante); ese sitio sigue
+  siendo el único lugar para editar/borrar el libro o importar uno.
 - **Exportar/importar libro completo (JSON) sí tiene endpoints propios**
   (`GET /api/books/:id/export`, `POST /api/books/import`), a diferencia del
   Markdown: aquí el propósito es llevarse el libro entero a otro sistema —
@@ -378,6 +397,14 @@ dispositivo. Decisiones propias que conviene no deshacer:
   importarlo sería depender de un paquete que no declaramos. En el `Sheet` sí
   se usa `KeyboardAvoidingView`, porque dentro de un `Modal` no hay cabecera y
   el offset 0 es correcto.
+- **El `KeyboardAvoidingView` del `Sheet` lleva `behavior: 'height'` también en
+  Android, no sólo `'padding'` en iOS** (`src/ui/components.tsx`). Un `Modal
+  transparent` de React Native en Android se dibuja en su propio Dialog/window,
+  que **no** hereda el `windowSoftInputMode="adjustResize"` de la Activity —
+  con `behavior: undefined` el teclado tapaba el `Sheet` entero (reproducido:
+  el formulario "Nuevo personaje" con `autoFocus` quedaba oculto detrás del
+  teclado al abrirse). `ScreenScroll` no tiene este problema porque no vive
+  dentro de un `Modal`: ahí sí llega el `adjustResize` real de la Activity.
 - **`keyboardShouldPersistTaps="handled"` en todos los scrolls con campos.**
   Sin eso, con el teclado abierto el primer toque en "Guardar" sólo lo cierra y
   hay que tocar dos veces.
@@ -386,6 +413,34 @@ dispositivo. Decisiones propias que conviene no deshacer:
   cambiar de una a otra: si cada una tuviera su copia, cambiar de libro en
   "Libros" no llegaría a las demás. `useActiveBook()` lanza un error si se usa
   fuera del Provider, para que ese fallo sea ruidoso y no silencioso.
+- **Pero las fichas de detalle NO usan el libro activo: sacan el `bookId` de la
+  entidad que ya han cargado** (`chapter.bookId`, `character.bookId`). Es la
+  otra cara de lo anterior: como las pantallas no se desmontan, cambiar de
+  libro con una ficha abierta la deja mostrando un capítulo del libro A
+  mientras el Context ya dice B. Con el libro activo, el editor de reparto
+  pasaba a ofrecer los personajes de B y guardar reventaba con "Los personajes
+  deben pertenecer al libro del capítulo"; las relaciones, igual. La entidad
+  cargada es la única fuente correcta. El libro activo se queda para las
+  pantallas de lista, que sí son "lo que hay en el libro actual".
+- **Y por lo mismo, los borradores de reordenar se descartan con un `useEffect`
+  sobre `[bookId]`** (`ChaptersScreen`, `PlotScreen`; en `PlotScreen` también
+  los formularios de suceso y promesa). Sin eso, un reordenamiento a medias
+  sobrevive al cambio de libro y "Guardar orden" manda los ids del libro
+  anterior. Aquí sí toca el libro activo, porque son pantallas de lista.
+- **El recuento de palabras del capítulo va sobre `useDeferredValue`**
+  (`ChapterDetailScreen`), no calculado directo en el render. Recorre el texto
+  entero, que puede ser un capítulo de cientos de KB: hacerlo en cada tecla se
+  nota al escribir. Diferido, React pinta la pulsación primero y recalcula
+  cuando hay hueco; el número va un instante por detrás mientras se escribe
+  seguido, que es el compromiso que queremos. Un `useMemo` a secas no serviría:
+  la dependencia sería el propio texto, que cambia en cada tecla.
+- **El selector de fichero del import acepta tres MIME, no sólo
+  `application/json`** (`BooksScreen`). En Android el MIME lo pone el proveedor
+  del fichero, y un `.json` llegado por correo, Drive o el gestor de archivos
+  se anuncia a menudo como `text/plain` o `application/octet-stream`: con el
+  filtro estricto sale en gris y no se puede elegir el propio export. No relaja
+  ninguna validación — lo que valida de verdad es el `JSON.parse` y el schema
+  de zod de `transferSchema.ts`.
 - **Migraciones por `PRAGMA user_version`** (`src/db/schema.ts`). Para cambiar
   el esquema se añade una entrada al final de `MIGRATIONS`; **nunca** se edita
   una ya publicada, porque los dispositivos que la aplicaron no la repetirán.
@@ -400,6 +455,111 @@ dispositivo. Decisiones propias que conviene no deshacer:
   artefactos.
 - **`eas.json` fuerza `buildType: apk`** en los perfiles `preview` y
   `production`. Por defecto EAS produce `.aab`, que no se instala en el móvil.
+- **`npm run android` (`expo run:android`) instala una build *debug* con
+  dev-client, que necesita Metro corriendo en el PC.** Sin el PC conectado (ni
+  siquiera en la misma Wi-Fi) sale "Unable to load script. Make sure you're
+  running Metro..." — reproducido, no es un bug de la app. Para una app
+  autónoma sin PC hace falta un build *release*: `npm run android:release`
+  (`expo run:android --variant release`, local) o `eas build --profile
+  preview` (en la nube, mismo `buildType: apk` de arriba). Ver
+  [react-native/README.md](react-native/README.md#generar-el-apk-y-ios).
+
+## Web pública (`react-firebase/`)
+
+Fork de `react/` para publicarlo en Firebase Hosting (sólo estáticos) con un
+dominio propio, sin pagar por un servidor ni por una base de datos, y sin
+usuarios concurrentes. Decisiones propias que conviene no deshacer:
+
+- **Es un fork, no código compartido con `react/`**, por el mismo motivo que
+  ya justifica `react-native/`: el puente entre las apps es el **formato
+  JSON** de export/import, no los módulos. Intentar compartir componentes
+  entre una app con servidor y otra sin él habría acoplado ambas a una capa de
+  abstracción que sólo una de las dos necesita.
+- **El seam es exactamente `src/api/client.ts` + `src/api/hooks.ts`**, los
+  mismos dos ficheros que en `react/` (66 + 361 líneas allí). Los otros ~35
+  ficheros de `react/src/` no saben que existe una API, así que se copiaron a
+  `react-firebase/` sin tocar una línea (salvo quitar las fotos, ver abajo).
+  `hooks.ts` mantiene los mismos nombres de hook, las mismas claves de caché y
+  las mismas invalidaciones — sólo cambia el cuerpo de cada
+  `queryFn`/`mutationFn`, que llama a `src/store/` en vez de a `fetch`. Un
+  arreglo en la lógica de negocio de `react/` se porta a mano con un
+  copy-paste de la función correspondiente.
+- **Se conserva react-query aunque no haya red que cachear.** Quitarlo
+  obligaría a reescribir los ~20 componentes que consumen `isPending`,
+  `error`, `mutateAsync`, `data`. Con él, esos componentes se copiaron tal
+  cual. El coste es una capa de indirección sobre funciones síncronas:
+  irrelevante. En `main.tsx` el `QueryClient` usa
+  `staleTime: Infinity, gcTime: Infinity, retry: false`: sin servidor,
+  "obsoleto" no significa nada — los datos sólo cambian cuando una mutación
+  local los toca, y esa misma mutación ya actualiza la caché.
+- **`src/store/` es el "backend": un documento único en memoria, persistido en
+  IndexedDB.** `store.ts` expone una función por cada operación que antes era
+  una ruta de la API (crear personaje, guardar arco, borrar suceso…), y
+  `select.ts` arma a mano los mismos joins que hacía el `include`/`select` de
+  Prisma para devolver exactamente las formas de `src/types.ts`. Si esas
+  formas no coinciden, los componentes se rompen en silencio.
+- **IndexedDB y no `localStorage`.** `textA`/`textB` admiten 200.000
+  caracteres cada uno (ver más arriba); con dos o tres libros con capítulos
+  escritos se pasa de sobra el límite de ~5 MB de `localStorage` y `setItem`
+  lanza `QuotaExceededError`. El guardado lleva un debounce de 300 ms para no
+  escribir en IndexedDB en cada tecla, con un `flush` síncrono en
+  `visibilitychange` → `hidden` para no perder el último cambio si se cierra
+  la pestaña a medio debounce.
+- **`newId()` (`src/store/ids.ts`) necesita un fallback manual.**
+  `crypto.randomUUID()` sólo existe en contexto seguro (HTTPS o `localhost`),
+  y este proyecto verifica la UI adrede cargándola por la IP de red
+  (`http://192.168.x.x:5173`, ver más abajo) para detectar justo este tipo de
+  fallo. Sin el fallback (`crypto.getRandomValues` armando un uuid v4 a mano,
+  y como último recurso un id no-uuid), crear cualquier cosa reventaría
+  exactamente en el escenario que se comprueba.
+- **`main.tsx` espera a `initStore()` antes de montar React.**
+  `state/useActiveBook.ts` (copiado sin tocar) borra la entrada de
+  `localStorage` del libro activo en cuanto ve `useBooks()` devolver una lista
+  que no lo contiene. Si el primer render ocurriera con el store todavía
+  vacío (antes de leer IndexedDB), ese efecto interpretaría "libro borrado" y
+  el libro activo se perdería en cada recarga de la página.
+- **Las validaciones reutilizan literalmente los schemas de zod de la API**
+  (`src/store/schemas.ts`, copiado de `api/src/lib/schemas.ts`), con una única
+  diferencia: los campos que allí exigían formato `uuid()` aquí sólo exigen
+  una cadena no vacía, porque el fallback de `newId()` no siempre produce ese
+  formato y la referencia ya se comprueba por existencia. Reutilizar los
+  schemas (en vez de reescribir a mano la lógica) es lo que conserva intacta
+  la distinción `longText`/`longTextPatch` que evita que guardar el panel A de
+  un capítulo vacíe el panel B — es la parte más fácil de romper si se
+  reimplementa desde cero.
+- **Sin locks ni transacciones.** JS es monohilo y hay un único usuario por
+  navegador, así que la carrera que `lockBookOrThrow` resolvía en la API (dos
+  altas a la vez calculando la misma `position`) no puede darse aquí. La única
+  operación que sí necesita "todo o nada" es el import completo de un libro
+  (`src/store/transfer.ts`): se construye sobre una **copia** del documento y
+  sólo se confirma al final con `replaceData()`, el equivalente sin
+  `prisma.$transaction`.
+- **`src/store/transferSchema.ts` es una copia literal de
+  `react-native/src/db/transferSchema.ts`.** Ya estaba escrito para validar el
+  formato v1 fuera de una base de datos; duplicarlo una vez más (en vez de
+  compartirlo) sigue la misma decisión que `react-native/` ya tomó: el puente
+  entre las tres apps es el fichero JSON, no el código que lo valida.
+- **Sin fotos de personaje en esta versión.** Sin servidor no hay dónde
+  guardar el fichero de la imagen (ni fotos como base64 en el JSON: se
+  descartó por engordar el fichero para poco beneficio). `Avatar`
+  (`components/ui.tsx`) perdió la prop `src` y siempre pinta la inicial del
+  nombre — ya tenía ese fallback en `react/`, así que ningún sitio se queda
+  con un hueco vacío. El formato de export/import ya excluía las fotos desde
+  el principio (son ficheros en `./uploads`, no datos portables), así que no
+  se pierde nada respecto a lo que hoy es interoperable entre `react/` y
+  `react-native/`.
+- **El navegador guarda varios libros; el fichero sigue siendo uno.** Abrir un
+  JSON crea un libro nuevo junto a los que ya hubiera en este navegador
+  (idéntico a como importa hoy `react/`); descargar vuelca un único libro. El
+  selector de libro y "Gestionar libros" se mantuvieron tal cual porque
+  IndexedDB ya persiste entre sesiones — recortar a un solo libro no habría
+  simplificado nada y sí habría tirado UI que ya funciona.
+- **Cada libro lleva un aviso de "sin descargar"** (`undownloaded` en
+  `WorkspaceData`, con badge en `BooksTab`) cuando tiene cambios desde la
+  última vez que se descargó su JSON — incluido nada más crearlo o editarlo.
+  Un libro recién **abierto** desde un fichero NO se marca así: el usuario
+  acaba de dármelo, ya tiene una copia en su disco. Es la única asimetría
+  entre "crear/editar" y "abrir" a la hora de marcar este flag.
 
 ## Red y acceso desde el móvil
 

@@ -13,6 +13,7 @@ El diseño completo está en [ARCHITECTURE.md](ARCHITECTURE.md).
 | `api/` (Express + Prisma) | ✅ funcionando |
 | `react/` — tabs Libro, Trama, Personajes, Capítulos + gestión de libros | ✅ funcionando |
 | `react-native/` — app Android/iOS, datos en el propio móvil | ✅ funcionando |
+| `react-firebase/` — versión sin servidor, para Firebase Hosting | ✅ funcionando |
 
 La tab de Libro es un resumen de sólo lectura: la trama, los personajes y los
 capítulos del libro activo en una sola pantalla, sin nada que editar. Sirve
@@ -61,6 +62,16 @@ API ni Postgres ni estar en la misma Wi-Fi. Los libros se pasan de una app a
 otra con el mismo export/import JSON.
 
 Instrucciones para generar el APK en [react-native/README.md](react-native/README.md).
+
+## Versión web sin servidor
+
+`react-firebase/` es una tercera versión de la misma app, para publicarla en
+Firebase Hosting con un dominio propio. También funciona **sin servidor**:
+guarda todo en IndexedDB dentro del navegador, y se descarga/abre como JSON
+para llevarse un libro a otro sitio o tener una copia fuera del navegador —
+mismo formato de fichero que `react/` y `react-native/`. No lleva fotos de
+personaje. Instrucciones de arranque y despliegue en
+[react-firebase/README.md](react-firebase/README.md).
 
 ## Stack
 
@@ -170,8 +181,9 @@ docker exec book_helper_db pg_dump -U bookhelper book_helper > backup.sql
 
 ```
 ├── api/              backend Express + Prisma
-├── react/            frontend web (Vite)
-├── react-native/     app móvil — futuro, vacío
+├── react/            frontend web (Vite), con api/ + Postgres
+├── react-native/     app móvil — Android/iOS, datos en SQLite local
+├── react-firebase/   frontend web sin servidor, datos en IndexedDB
 ├── postgres-data/    volumen de la BD (gitignored)
 └── uploads/          fotos de personajes (gitignored)
 ```
