@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 import { MIGRATIONS } from './schema';
 
-const DB_NAME = 'book-helper.db';
+const DB_NAME = 'story-planner.db';
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 

@@ -1,4 +1,4 @@
-# Book Helper — móvil (Android / iOS)
+# Story Planner — móvil (Android / iOS)
 
 La misma app de diseñar novelas, pero **sin servidor**: los datos viven en una
 SQLite dentro del propio teléfono. No hay API, ni Postgres, ni red. Se puede
@@ -56,6 +56,13 @@ El perfil `preview` está configurado en `eas.json` para producir **APK** y no
 Para un iOS instalable en un iPhone real hace falta cuenta de Apple Developer
 (99 $/año); eso es de Apple, no de esta app.
 
+**Para que te lo instale solo** (en vez de bajarte el APK y arrastrarlo a
+mano), con el móvil enchufado por USB y depuración USB autorizada:
+
+```bash
+eas build:run --platform android   # instala el último build de EAS en el dispositivo conectado
+```
+
 ### Opción B — compilar en local (sin servicios externos)
 
 Requiere JDK 17+ y Android Studio con el SDK (unos 10 GB).
@@ -74,6 +81,31 @@ sigue siendo el comando de desarrollo (build debug + dev-client).
 regenerables, no fuente.
 
 Para iOS en local hace falta un Mac con Xcode. No hay forma de evitarlo.
+
+### Probar rápido en tu móvil Android por USB
+
+La forma más directa de probar un cambio en un teléfono real, sin subir nada
+a la nube: la Opción B de arriba, con el móvil enchufado.
+
+1. En el móvil: *Ajustes → Opciones de desarrollador → Depuración USB* (si no
+   ves "Opciones de desarrollador", tócale 7 veces a *Número de compilación*
+   en *Información del teléfono*).
+2. Enchufa el móvil por USB y acepta en la pantalla el aviso "¿Permitir la
+   depuración USB?".
+3. Comprueba que `adb` lo ve autorizado (no como `unauthorized`):
+   ```bash
+   adb devices
+   ```
+4. Genera e instala el APK release:
+   ```bash
+   cd react-native
+   npx expo prebuild          # sólo hace falta si no existe android/, o si cambió app.json
+   npm run android:release
+   ```
+
+Al terminar, la app ya está instalada como una app normal del sistema (build
+**release**, sin dev-client): puedes desenchufar el móvil y seguir
+usándola sin el PC ni Metro corriendo.
 
 ## Llevarse los libros de la web al móvil
 

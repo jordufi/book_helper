@@ -3,7 +3,7 @@ import Storage from 'expo-sqlite/kv-store';
 import { useBooks } from '../data/hooks';
 import type { Book } from '../types';
 
-const STORAGE_KEY = 'book-helper:libro-activo';
+const STORAGE_KEY = 'story-planner:libro-activo';
 
 interface ActiveBookValue {
   books: Book[];
