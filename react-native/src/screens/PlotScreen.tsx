@@ -31,6 +31,7 @@ import {
   useUpdatePromise,
 } from '../data/hooks';
 import { useActiveBook } from '../state/useActiveBook';
+import { useT } from '../state/useSettings';
 import type { Plot, PlotEvent, PlotPromise } from '../types';
 
 /** Promesa reducida a lo que necesita un badge; el id es la key, no el título
@@ -42,6 +43,7 @@ interface PromiseBadge {
 
 export function PlotScreen() {
   const t = useTheme();
+  const i18n = useT();
   const { bookId } = useActiveBook();
   const { data: plot, isLoading, error } = usePlot(bookId);
 
@@ -83,7 +85,7 @@ export function PlotScreen() {
   if (!bookId) {
     return (
       <Screen>
-        <Placeholder title="Sin libro" message="Crea un libro en la pestaña Libros para empezar." />
+        <Placeholder title={i18n.common.noBookTitle} message={i18n.common.noBookMessage} />
       </Screen>
     );
   }
@@ -114,17 +116,13 @@ export function PlotScreen() {
     const seeded = promises.filter((p) => p.setupEventId === event.id).length;
     const paidHere = promises.filter((p) => p.payoffEventId === event.id).length;
     const parts: string[] = [];
-    if (seeded > 0) parts.push(`se perderán ${seeded} promesa(s) sembrada(s) aquí`);
-    if (paidHere > 0) parts.push(`${paidHere} promesa(s) pagada(s) aquí volverán a pendiente`);
+    if (seeded > 0) parts.push(i18n.plot.seededWillBeLost(seeded));
+    if (paidHere > 0) parts.push(i18n.plot.paidWillReturn(paidHere));
 
-    Alert.alert(
-      'Borrar suceso',
-      `¿Borrar "${event.title}"?${parts.length ? ` ${parts.join(' y ')}.` : ''}`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Borrar', style: 'destructive', onPress: () => deleteEvent.mutate(event.id) },
-      ],
-    );
+    Alert.alert(i18n.plot.confirmDeleteEventTitle, i18n.plot.confirmDeleteEventBody(event.title, parts), [
+      { text: i18n.common.cancel, style: 'cancel' },
+      { text: i18n.common.delete, style: 'destructive', onPress: () => deleteEvent.mutate(event.id) },
+    ]);
   };
 
   return (
@@ -145,21 +143,21 @@ export function PlotScreen() {
           }
         />
 
-        <Section title={`Sucesos — ${events.length}`}>
+        <Section title={i18n.plot.eventsSectionTitle(events.length)}>
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
             {events.length > 1 && !order && (
-              <Button label="Reordenar" onPress={() => setOrder(events)} />
+              <Button label={i18n.plot.reorder} onPress={() => setOrder(events)} />
             )}
             {!order && (
-              <Button label="+ Suceso" variant="primary" onPress={() => setEventForm({})} />
+              <Button label={i18n.plot.newEvent} variant="primary" onPress={() => setEventForm({})} />
             )}
           </View>
 
           {order && (
             <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Button label="Cancelar" onPress={() => setOrder(null)} style={{ flex: 1 }} />
+              <Button label={i18n.common.cancel} onPress={() => setOrder(null)} style={{ flex: 1 }} />
               <Button
-                label={reorderEvents.isPending ? 'Guardando…' : 'Guardar orden'}
+                label={reorderEvents.isPending ? i18n.common.saving : i18n.plot.saveOrder}
                 variant="primary"
                 disabled={reorderEvents.isPending}
                 onPress={async () => {
@@ -171,7 +169,7 @@ export function PlotScreen() {
             </View>
           )}
 
-          {shown.length === 0 && <EmptyNote>Todavía no hay sucesos en la trama.</EmptyNote>}
+          {shown.length === 0 && <EmptyNote>{i18n.plot.eventsEmpty}</EmptyNote>}
 
           {shown.map((e, i) => {
             const badges = promisesByEvent.get(e.id);
@@ -202,10 +200,10 @@ export function PlotScreen() {
                 {badges && (badges.seeds.length > 0 || badges.payoffs.length > 0) && (
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
                     {badges.seeds.map((p) => (
-                      <Badge key={`seed-${p.id}`} label={`siembra: ${p.title}`} tone="accent" />
+                      <Badge key={`seed-${p.id}`} label={i18n.plot.seedBadge(p.title)} tone="accent" />
                     ))}
                     {badges.payoffs.map((p) => (
-                      <Badge key={`payoff-${p.id}`} label={`paga: ${p.title}`} tone="ok" />
+                      <Badge key={`payoff-${p.id}`} label={i18n.plot.payoffBadge(p.title)} tone="ok" />
                     ))}
                   </View>
                 )}
@@ -228,11 +226,11 @@ export function PlotScreen() {
                 ) : (
                   <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }}>
                     <Button
-                      label="Editar"
+                      label={i18n.common.edit}
                       variant="ghost"
                       onPress={() => setEventForm({ event: e })}
                     />
-                    <Button label="Borrar" variant="danger" onPress={() => confirmDeleteEvent(e)} />
+                    <Button label={i18n.common.delete} variant="danger" onPress={() => confirmDeleteEvent(e)} />
                   </View>
                 )}
               </Card>
@@ -240,26 +238,24 @@ export function PlotScreen() {
           })}
         </Section>
 
-        <Section title={`Promesas — ${pending.length} de ${promises.length} sin pagar`}>
+        <Section title={i18n.plot.promisesSectionTitle(pending.length, promises.length)}>
           <Button
-            label="+ Promesa"
+            label={i18n.plot.newPromise}
             variant="primary"
             onPress={() => setPromiseForm({})}
             disabled={events.length === 0}
           />
-          {events.length === 0 && (
-            <Subtle>Necesitas al menos un suceso para crear una promesa.</Subtle>
-          )}
+          {events.length === 0 && <Subtle>{i18n.plot.needsAnEvent}</Subtle>}
 
-          {promises.length === 0 && <EmptyNote>Sin promesas todavía.</EmptyNote>}
+          {promises.length === 0 && <EmptyNote>{i18n.plot.promisesEmpty}</EmptyNote>}
 
           {[
-            { label: 'Pendientes', items: pending },
-            { label: 'Cumplidas', items: paid },
+            { id: 'pending', label: i18n.plot.pendingGroup, items: pending },
+            { id: 'fulfilled', label: i18n.plot.fulfilledGroup, items: paid },
           ].map(
             (group) =>
               group.items.length > 0 && (
-                <View key={group.label} style={{ gap: 8, marginTop: 8 }}>
+                <View key={group.id} style={{ gap: 8, marginTop: 8 }}>
                   <Subtle>{group.label}</Subtle>
                   {group.items.map((p) => {
                     // Pagar antes de sembrar es un flashback: se señala, no se prohíbe.
@@ -268,41 +264,43 @@ export function PlotScreen() {
                     return (
                       <Card key={p.id}>
                         <Title>{p.title}</Title>
-                        <Subtle>
-                          Se siembra en #{p.setupEvent.position + 1} · {p.setupEvent.title}
-                        </Subtle>
+                        <Subtle>{i18n.plot.seededAt(p.setupEvent.position + 1, p.setupEvent.title)}</Subtle>
                         {p.description && <Prose text={p.description} />}
                         <View
                           style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 }}
                         >
                           {p.payoffEvent ? (
                             <Badge
-                              label={`paga en #${p.payoffEvent.position + 1} · ${p.payoffEvent.title}`}
+                              label={i18n.plot.paidAt(p.payoffEvent.position + 1, p.payoffEvent.title)}
                               tone="ok"
                             />
                           ) : (
-                            <Badge label="pendiente" tone="accent" />
+                            <Badge label={i18n.plot.pendingBadge} tone="accent" />
                           )}
-                          {outOfOrder && <Badge label="se paga antes de sembrarse" />}
+                          {outOfOrder && <Badge label={i18n.plot.outOfOrderBadge} />}
                         </View>
                         <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }}>
                           <Button
-                            label="Editar"
+                            label={i18n.common.edit}
                             variant="ghost"
                             onPress={() => setPromiseForm({ promise: p })}
                           />
                           <Button
-                            label="Borrar"
+                            label={i18n.common.delete}
                             variant="danger"
                             onPress={() =>
-                              Alert.alert('Borrar promesa', `¿Borrar "${p.title}"?`, [
-                                { text: 'Cancelar', style: 'cancel' },
-                                {
-                                  text: 'Borrar',
-                                  style: 'destructive',
-                                  onPress: () => deletePromise.mutate(p.id),
-                                },
-                              ])
+                              Alert.alert(
+                                i18n.plot.confirmDeletePromiseTitle,
+                                i18n.plot.confirmDeletePromiseBody(p.title),
+                                [
+                                  { text: i18n.common.cancel, style: 'cancel' },
+                                  {
+                                    text: i18n.common.delete,
+                                    style: 'destructive',
+                                    onPress: () => deletePromise.mutate(p.id),
+                                  },
+                                ],
+                              )
                             }
                           />
                         </View>
@@ -360,19 +358,20 @@ function EventForm({
   onClose: () => void;
   onSubmit: (values: { title: string; description: string | null }) => void;
 }) {
+  const i18n = useT();
   const [title, setTitle] = useState(event?.title ?? '');
   const [description, setDescription] = useState(event?.description ?? '');
 
   return (
     <Sheet
       visible
-      title={event ? 'Editar suceso' : 'Nuevo suceso'}
+      title={event ? i18n.plot.editEventTitle : i18n.plot.newEventTitle}
       onClose={onClose}
       footer={
         <>
-          <Button label="Cancelar" onPress={onClose} style={{ flex: 1 }} />
+          <Button label={i18n.common.cancel} onPress={onClose} style={{ flex: 1 }} />
           <Button
-            label={pending ? 'Guardando…' : 'Guardar'}
+            label={pending ? i18n.common.saving : i18n.common.save}
             variant="primary"
             disabled={!title.trim() || pending}
             onPress={() =>
@@ -383,10 +382,10 @@ function EventForm({
         </>
       }
     >
-      <Field label="Título">
-        <Input value={title} onChangeText={setTitle} placeholder="Qué ocurre" autoFocus />
+      <Field label={i18n.plot.fieldEventTitle}>
+        <Input value={title} onChangeText={setTitle} placeholder={i18n.plot.eventTitlePlaceholder} autoFocus />
       </Field>
-      <Field label="Descripción">
+      <Field label={i18n.plot.fieldDescription}>
         <Input value={description} onChangeText={setDescription} multiline />
       </Field>
     </Sheet>
@@ -411,6 +410,7 @@ function PromiseForm({
     payoffEventId: string | null;
   }) => void;
 }) {
+  const i18n = useT();
   const [title, setTitle] = useState(promise?.title ?? '');
   const [description, setDescription] = useState(promise?.description ?? '');
   const [setupEventId, setSetupEventId] = useState(promise?.setupEventId ?? events[0]?.id ?? '');
@@ -424,13 +424,13 @@ function PromiseForm({
   return (
     <Sheet
       visible
-      title={promise ? 'Editar promesa' : 'Nueva promesa'}
+      title={promise ? i18n.plot.editPromiseTitle : i18n.plot.newPromiseTitle}
       onClose={onClose}
       footer={
         <>
-          <Button label="Cancelar" onPress={onClose} style={{ flex: 1 }} />
+          <Button label={i18n.common.cancel} onPress={onClose} style={{ flex: 1 }} />
           <Button
-            label={pending ? 'Guardando…' : 'Guardar'}
+            label={pending ? i18n.common.saving : i18n.common.save}
             variant="primary"
             disabled={!title.trim() || !setupEventId || pending}
             onPress={() =>
@@ -447,31 +447,31 @@ function PromiseForm({
         </>
       }
     >
-      <Field label="Título">
+      <Field label={i18n.plot.fieldPromiseTitle}>
         <Input
           value={title}
           onChangeText={setTitle}
-          placeholder="Qué se promete al lector"
+          placeholder={i18n.plot.promiseTitlePlaceholder}
           autoFocus
         />
       </Field>
-      <Field label="Descripción">
+      <Field label={i18n.plot.fieldDescription}>
         <Input value={description} onChangeText={setDescription} multiline />
       </Field>
-      <Field label="Se siembra en">
+      <Field label={i18n.plot.fieldSetupEvent}>
         <Select
           value={setupEventId}
           options={eventOptions}
           onChange={setSetupEventId}
-          placeholder="Elige el suceso…"
+          placeholder={i18n.plot.setupEventPlaceholder}
         />
       </Field>
-      <Field label="Se paga en" hint="Déjalo en «Pendiente» si todavía no se paga">
+      <Field label={i18n.plot.fieldPayoffEvent} hint={i18n.plot.payoffEventHint}>
         <Select
           value={payoffEventId}
-          options={[{ value: '', label: '— Pendiente —' }, ...eventOptions]}
+          options={[{ value: '', label: i18n.plot.payoffPendingOption }, ...eventOptions]}
           onChange={setPayoffEventId}
-          placeholder="— Pendiente —"
+          placeholder={i18n.plot.payoffPendingOption}
         />
       </Field>
     </Sheet>

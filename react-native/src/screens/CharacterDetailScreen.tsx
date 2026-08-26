@@ -30,10 +30,9 @@ import {
   useUpdateCharacter,
 } from '../data/hooks';
 import { UnsavedChangesGuard, useReportUnsaved } from '../lib/unsavedChanges';
+import { useT } from '../state/useSettings';
 import type { CharacterDetailProps } from '../navigation';
-import { CHARACTER_ROLES, ROLE_LABELS, type Character, type CharacterRole } from '../types';
-
-const ROLE_OPTIONS = CHARACTER_ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r] }));
+import { CHARACTER_ROLES, type Character, type CharacterRole } from '../types';
 
 interface Stage {
   title: string;
@@ -47,6 +46,7 @@ interface Stage {
  */
 function ArcEditor({ character, bookId }: { character: Character; bookId: string | null }) {
   const t = useTheme();
+  const i18n = useT();
   const save = useSaveArc(bookId);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Stage[]>([]);
@@ -97,10 +97,7 @@ function ArcEditor({ character, bookId }: { character: Character; bookId: string
     return (
       <>
         {character.arcStages.length === 0 ? (
-          <EmptyNote>
-            Sin etapas. Divide el arco en momentos: punto de partida, detonante, crisis,
-            transformación.
-          </EmptyNote>
+          <EmptyNote>{i18n.characterDetail.arcEmpty}</EmptyNote>
         ) : (
           character.arcStages.map((s, i) => (
             <View key={s.id} style={{ flexDirection: 'row', gap: 10 }}>
@@ -124,7 +121,7 @@ function ArcEditor({ character, bookId }: { character: Character; bookId: string
           ))
         )}
         <Button
-          label={character.arcStages.length ? 'Editar arco' : 'Añadir etapas'}
+          label={character.arcStages.length ? i18n.characterDetail.editArc : i18n.characterDetail.addStages}
           onPress={start}
         />
       </>
@@ -139,12 +136,12 @@ function ArcEditor({ character, bookId }: { character: Character; bookId: string
           <Input
             value={s.title}
             onChangeText={(v) => update(i, { title: v })}
-            placeholder="Título de la etapa"
+            placeholder={i18n.characterDetail.stageTitlePlaceholder}
           />
           <Input
             value={s.description}
             onChangeText={(v) => update(i, { description: v })}
-            placeholder="Qué ocurre en esta etapa"
+            placeholder={i18n.characterDetail.stageDescriptionPlaceholder}
             multiline
           />
           <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -157,7 +154,7 @@ function ArcEditor({ character, bookId }: { character: Character; bookId: string
             />
             <View style={{ flex: 1 }} />
             <Button
-              label="Quitar"
+              label={i18n.characterDetail.removeStage}
               variant="danger"
               onPress={() => setDraft((d) => d.filter((_, j) => j !== i))}
             />
@@ -166,18 +163,18 @@ function ArcEditor({ character, bookId }: { character: Character; bookId: string
       ))}
 
       <Button
-        label="+ Etapa"
+        label={i18n.characterDetail.addStage}
         onPress={() => setDraft((d) => [...d, { title: '', description: '' }])}
       />
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Button
-          label="Cancelar"
+          label={i18n.common.cancel}
           onPress={() => setEditing(false)}
           disabled={save.isPending}
           style={{ flex: 1 }}
         />
         <Button
-          label={save.isPending ? 'Guardando…' : 'Guardar arco'}
+          label={save.isPending ? i18n.common.saving : i18n.characterDetail.saveArc}
           variant="primary"
           onPress={submit}
           disabled={save.isPending}
@@ -202,6 +199,7 @@ function RelationshipEditor({
   bookId: string | null;
   onOpenCharacter: (id: string) => void;
 }) {
+  const i18n = useT();
   const { data: candidates } = useCharacters(bookId);
   const add = useAddRelationship(bookId);
   const remove = useDeleteRelationship(bookId, character.id);
@@ -229,7 +227,7 @@ function RelationshipEditor({
 
   return (
     <>
-      {character.relationships.length === 0 && <EmptyNote>Sin relaciones.</EmptyNote>}
+      {character.relationships.length === 0 && <EmptyNote>{i18n.characterDetail.relationshipsEmpty}</EmptyNote>}
 
       {character.relationships.map((r) => (
         <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -250,18 +248,22 @@ function RelationshipEditor({
 
       <ErrorBanner error={add.error ?? remove.error} />
 
-      <Button label="+ Relación" onPress={() => setAdding(true)} disabled={options.length === 0} />
-      {options.length === 0 && <Subtle>Necesitas otro personaje en el libro.</Subtle>}
+      <Button
+        label={i18n.characterDetail.addRelationship}
+        onPress={() => setAdding(true)}
+        disabled={options.length === 0}
+      />
+      {options.length === 0 && <Subtle>{i18n.characterDetail.needsAnotherCharacter}</Subtle>}
 
       <Sheet
         visible={adding}
-        title="Nueva relación"
+        title={i18n.characterDetail.newRelationshipTitle}
         onClose={() => setAdding(false)}
         footer={
           <>
-            <Button label="Cancelar" onPress={() => setAdding(false)} style={{ flex: 1 }} />
+            <Button label={i18n.common.cancel} onPress={() => setAdding(false)} style={{ flex: 1 }} />
             <Button
-              label={add.isPending ? 'Añadiendo…' : 'Añadir'}
+              label={add.isPending ? i18n.characterDetail.adding : i18n.characterDetail.add}
               variant="primary"
               disabled={!relatedId || !type.trim() || add.isPending}
               onPress={submit}
@@ -270,25 +272,25 @@ function RelationshipEditor({
           </>
         }
       >
-        <Field label="Personaje">
+        <Field label={i18n.characterDetail.fieldRelatedCharacter}>
           <Select
             value={relatedId}
             options={options.map((c) => ({ value: c.id, label: c.name }))}
             onChange={setRelatedId}
-            placeholder="Elige un personaje…"
+            placeholder={i18n.characterDetail.relatedCharacterPlaceholder}
           />
         </Field>
-        <Field label="Es su…">
-          <Input value={type} onChangeText={setType} placeholder="hermano, rival, mentor" />
+        <Field label={i18n.characterDetail.fieldRelationType}>
+          <Input value={type} onChangeText={setType} placeholder={i18n.characterDetail.relationTypePlaceholder} />
         </Field>
         <Field
-          label={`Cómo ${relatedName ? `te ve ${relatedName}` : 'te ve él/ella'} (opcional)`}
-          hint='Déjalo vacío para no crear la inversa. Puede ser otro texto, p.ej. "hermana".'
+          label={i18n.characterDetail.reciprocalLabel(relatedName)}
+          hint={i18n.characterDetail.reciprocalHint}
         >
           <Input
             value={reciprocalType}
             onChangeText={setReciprocalType}
-            placeholder="hermana, discípulo, enemiga"
+            placeholder={i18n.characterDetail.reciprocalPlaceholder}
           />
         </Field>
       </Sheet>
@@ -297,6 +299,7 @@ function RelationshipEditor({
 }
 
 export function CharacterDetailScreen({ route, navigation }: CharacterDetailProps) {
+  const i18n = useT();
   const { characterId } = route.params;
   const { data: character, isLoading, error } = useCharacter(characterId);
   // El libro sale del PROPIO personaje, no del libro activo. La ficha no se
@@ -333,29 +336,25 @@ export function CharacterDetailScreen({ route, navigation }: CharacterDetailProp
   if (!character)
     return (
       <Screen>
-        <EmptyNote>Personaje no encontrado.</EmptyNote>
+        <EmptyNote>{i18n.characterDetail.notFound}</EmptyNote>
       </Screen>
     );
 
   const confirmDelete = () =>
-    Alert.alert(
-      'Borrar personaje',
-      `¿Borrar a ${character.name}? Se perderán su arco y sus relaciones.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Borrar',
-          style: 'destructive',
-          onPress: async () => {
-            await remove.mutateAsync(character.id);
-            navigation.goBack();
-          },
+    Alert.alert(i18n.characterDetail.confirmDeleteTitle, i18n.characterDetail.confirmDeleteBody(character.name), [
+      { text: i18n.common.cancel, style: 'cancel' },
+      {
+        text: i18n.common.delete,
+        style: 'destructive',
+        onPress: async () => {
+          await remove.mutateAsync(character.id);
+          navigation.goBack();
         },
-      ],
-    );
+      },
+    ]);
 
   return (
-    <UnsavedChangesGuard message="Hay cambios sin guardar en este personaje. Si sales ahora se perderán.">
+    <UnsavedChangesGuard message={i18n.characterDetail.unsavedMessage}>
       <Screen>
         <ScreenScroll contentContainerStyle={{ padding: SPACING + 4, paddingBottom: 48 }}>
           <View
@@ -377,36 +376,36 @@ export function CharacterDetailScreen({ route, navigation }: CharacterDetailProp
           </View>
 
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: SPACING }}>
-            <Button label="Editar" onPress={() => setEditing(true)} style={{ flex: 1 }} />
-            <Button label="Borrar" variant="danger" onPress={confirmDelete} style={{ flex: 1 }} />
+            <Button label={i18n.common.edit} onPress={() => setEditing(true)} style={{ flex: 1 }} />
+            <Button label={i18n.common.delete} variant="danger" onPress={confirmDelete} style={{ flex: 1 }} />
           </View>
 
-          <Section title="Descripción física" filled={!!character.physicalDescription}>
+          <Section title={i18n.characterDetail.sectionPhysical} filled={!!character.physicalDescription}>
             <Prose text={character.physicalDescription} />
           </Section>
-          <Section title="Personalidad" filled={!!character.personality}>
+          <Section title={i18n.characterDetail.sectionPersonality} filled={!!character.personality}>
             <Prose text={character.personality} />
           </Section>
-          <Section title="Historia previa" filled={!!character.backstory}>
+          <Section title={i18n.characterDetail.sectionBackstory} filled={!!character.backstory}>
             <Prose text={character.backstory} />
           </Section>
           {/* La trama personal es lo que le OCURRE; el arco es cómo CAMBIA por
             dentro. Son campos distintos a propósito. */}
-          <Section title="Trama personal" filled={!!character.personalPlot}>
+          <Section title={i18n.characterDetail.sectionPersonalPlot} filled={!!character.personalPlot}>
             <Prose text={character.personalPlot} />
           </Section>
-          <Section title="Arco" filled={!!character.arcSummary || character.arcStages.length > 0}>
+          <Section title={i18n.characterDetail.sectionArc} filled={!!character.arcSummary || character.arcStages.length > 0}>
             {character.arcSummary && <Prose text={character.arcSummary} />}
             <ArcEditor character={character} bookId={bookId} />
           </Section>
-          <Section title="Relaciones" filled={character.relationships.length > 0}>
+          <Section title={i18n.characterDetail.sectionRelationships} filled={character.relationships.length > 0}>
             <RelationshipEditor
               character={character}
               bookId={bookId}
               onOpenCharacter={(id) => navigation.push('CharacterDetail', { characterId: id })}
             />
           </Section>
-          <Section title="Notas" filled={!!character.notes} defaultOpen={false}>
+          <Section title={i18n.characterDetail.sectionNotes} filled={!!character.notes} defaultOpen={false}>
             <Prose text={character.notes} />
           </Section>
         </ScreenScroll>
@@ -438,6 +437,8 @@ function CharacterForm({
   onClose: () => void;
   onSubmit: (values: Record<string, string | null>) => void;
 }) {
+  const i18n = useT();
+  const roleOptions = CHARACTER_ROLES.map((r) => ({ value: r, label: i18n.roles[r] }));
   const [values, setValues] = useState({
     name: character.name,
     role: character.role,
@@ -455,13 +456,13 @@ function CharacterForm({
   return (
     <Sheet
       visible
-      title="Editar personaje"
+      title={i18n.characterDetail.editTitle}
       onClose={onClose}
       footer={
         <>
-          <Button label="Cancelar" onPress={onClose} style={{ flex: 1 }} />
+          <Button label={i18n.common.cancel} onPress={onClose} style={{ flex: 1 }} />
           <Button
-            label={pending ? 'Guardando…' : 'Guardar'}
+            label={pending ? i18n.common.saving : i18n.common.save}
             variant="primary"
             disabled={!values.name.trim() || pending}
             onPress={() =>
@@ -482,40 +483,40 @@ function CharacterForm({
         </>
       }
     >
-      <Field label="Nombre">
+      <Field label={i18n.characters.fieldName}>
         <Input value={values.name} onChangeText={(v) => set('name', v)} />
       </Field>
-      <Field label="Rol">
+      <Field label={i18n.characters.fieldRole}>
         <Choice
           value={values.role}
-          options={ROLE_OPTIONS}
+          options={roleOptions}
           onChange={(v: CharacterRole) => set('role', v)}
         />
       </Field>
       {/* Texto libre a propósito: admite "unos cuarenta" o "inmortal". */}
-      <Field label="Edad">
-        <Input value={values.age} onChangeText={(v) => set('age', v)} placeholder="unos cuarenta" />
+      <Field label={i18n.characterDetail.fieldAge}>
+        <Input value={values.age} onChangeText={(v) => set('age', v)} placeholder={i18n.characterDetail.agePlaceholder} />
       </Field>
-      <Field label="Descripción física">
+      <Field label={i18n.characterDetail.fieldPhysical}>
         <Input
           value={values.physicalDescription}
           onChangeText={(v) => set('physicalDescription', v)}
           multiline
         />
       </Field>
-      <Field label="Personalidad">
+      <Field label={i18n.characterDetail.fieldPersonality}>
         <Input value={values.personality} onChangeText={(v) => set('personality', v)} multiline />
       </Field>
-      <Field label="Historia previa" hint="Lo que le ocurrió ANTES de empezar el libro">
+      <Field label={i18n.characterDetail.fieldBackstory} hint={i18n.characterDetail.backstoryHint}>
         <Input value={values.backstory} onChangeText={(v) => set('backstory', v)} multiline />
       </Field>
-      <Field label="Trama personal" hint="Lo que le OCURRE durante el libro">
+      <Field label={i18n.characterDetail.fieldPersonalPlot} hint={i18n.characterDetail.personalPlotHint}>
         <Input value={values.personalPlot} onChangeText={(v) => set('personalPlot', v)} multiline />
       </Field>
-      <Field label="Resumen del arco" hint="Cómo CAMBIA por dentro">
+      <Field label={i18n.characterDetail.fieldArcSummary} hint={i18n.characterDetail.arcSummaryHint}>
         <Input value={values.arcSummary} onChangeText={(v) => set('arcSummary', v)} multiline />
       </Field>
-      <Field label="Notas">
+      <Field label={i18n.characterDetail.fieldNotes}>
         <Input value={values.notes} onChangeText={(v) => set('notes', v)} multiline />
       </Field>
     </Sheet>

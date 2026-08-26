@@ -1,4 +1,4 @@
-import { useColorScheme } from 'react-native';
+import { useThemeScheme } from '../state/useSettings';
 
 /** Misma paleta que `react/src/styles.css`, para que las dos apps se reconozcan. */
 const light = {
@@ -33,7 +33,7 @@ export const RADIUS = 10;
 export const SPACING = 12;
 
 export function useTheme(): Theme {
-  return useColorScheme() === 'dark' ? dark : light;
+  return useThemeScheme() === 'dark' ? dark : light;
 }
 
 /** Colores por rol de personaje, equivalentes a los badges de la web. */

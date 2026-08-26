@@ -17,11 +17,13 @@ import {
 import { SPACING, useTheme } from '../ui/theme';
 import { useChapters, useCreateChapter, useReorderChapters } from '../data/hooks';
 import { useActiveBook } from '../state/useActiveBook';
+import { useT } from '../state/useSettings';
 import type { ChaptersListProps } from '../navigation';
 import type { ChapterSummary } from '../types';
 
 export function ChaptersScreen({ navigation }: ChaptersListProps) {
   const t = useTheme();
+  const i18n = useT();
   const { bookId } = useActiveBook();
   const { data: chapters, isLoading, error } = useChapters(bookId);
   const create = useCreateChapter(bookId);
@@ -43,7 +45,7 @@ export function ChaptersScreen({ navigation }: ChaptersListProps) {
   if (!bookId) {
     return (
       <Screen>
-        <Placeholder title="Sin libro" message="Crea un libro en la pestaña Libros para empezar." />
+        <Placeholder title={i18n.common.noBookTitle} message={i18n.common.noBookMessage} />
       </Screen>
     );
   }
@@ -88,20 +90,24 @@ export function ChaptersScreen({ navigation }: ChaptersListProps) {
           <View style={{ gap: SPACING }}>
             <ErrorBanner error={error ?? create.error ?? reorder.error} />
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Subtle>{list.length === 1 ? '1 capítulo' : `${list.length} capítulos`}</Subtle>
+              <Subtle>{i18n.chapters.count(list.length)}</Subtle>
               <View style={{ flex: 1 }} />
               {list.length > 1 && !order && (
-                <Button label="Reordenar" onPress={() => setOrder(list)} />
+                <Button label={i18n.chapters.reorder} onPress={() => setOrder(list)} />
               )}
               {!order && (
-                <Button label="+ Capítulo" variant="primary" onPress={() => setCreating(true)} />
+                <Button
+                  label={i18n.chapters.newChapter}
+                  variant="primary"
+                  onPress={() => setCreating(true)}
+                />
               )}
             </View>
             {order && (
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Button label="Cancelar" onPress={() => setOrder(null)} style={{ flex: 1 }} />
+                <Button label={i18n.common.cancel} onPress={() => setOrder(null)} style={{ flex: 1 }} />
                 <Button
-                  label={reorder.isPending ? 'Guardando…' : 'Guardar orden'}
+                  label={reorder.isPending ? i18n.common.saving : i18n.chapters.saveOrder}
                   variant="primary"
                   disabled={reorder.isPending}
                   onPress={async () => {
@@ -114,7 +120,7 @@ export function ChaptersScreen({ navigation }: ChaptersListProps) {
             )}
           </View>
         }
-        ListEmptyComponent={<EmptyNote>Todavía no hay capítulos en este libro.</EmptyNote>}
+        ListEmptyComponent={<EmptyNote>{i18n.chapters.empty}</EmptyNote>}
         renderItem={({ item, index }) => (
           <Card
             onPress={
@@ -137,9 +143,7 @@ export function ChaptersScreen({ navigation }: ChaptersListProps) {
               <View style={{ flex: 1, gap: 2 }}>
                 <Title>{item.title}</Title>
                 {item.synopsis && <Subtle>{item.synopsis}</Subtle>}
-                <Subtle>
-                  {item._count.cast === 1 ? '1 personaje' : `${item._count.cast} personajes`}
-                </Subtle>
+                <Subtle>{i18n.chapters.castCount(item._count.cast)}</Subtle>
               </View>
               {order && (
                 <View style={{ gap: 4 }}>
@@ -164,13 +168,13 @@ export function ChaptersScreen({ navigation }: ChaptersListProps) {
 
       <Sheet
         visible={creating}
-        title="Nuevo capítulo"
+        title={i18n.chapters.newSheetTitle}
         onClose={() => setCreating(false)}
         footer={
           <>
-            <Button label="Cancelar" onPress={() => setCreating(false)} style={{ flex: 1 }} />
+            <Button label={i18n.common.cancel} onPress={() => setCreating(false)} style={{ flex: 1 }} />
             <Button
-              label={create.isPending ? 'Creando…' : 'Crear'}
+              label={create.isPending ? i18n.common.creating : i18n.common.create}
               variant="primary"
               disabled={!title.trim() || create.isPending}
               onPress={submit}
@@ -179,16 +183,16 @@ export function ChaptersScreen({ navigation }: ChaptersListProps) {
           </>
         }
       >
-        <Field label="Título">
+        <Field label={i18n.chapters.fieldTitle}>
           <Input
             value={title}
             onChangeText={setTitle}
-            placeholder="Cómo se llama el capítulo"
+            placeholder={i18n.chapters.titlePlaceholder}
             autoFocus
           />
         </Field>
         {/* La sinopsis es el DISEÑO del capítulo, distinto del texto escrito. */}
-        <Field label="Sinopsis" hint="Qué ocurre en el capítulo">
+        <Field label={i18n.chapters.fieldSynopsis} hint={i18n.chapters.synopsisHint}>
           <Input value={synopsis} onChangeText={setSynopsis} multiline />
         </Field>
       </Sheet>

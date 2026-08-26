@@ -7,7 +7,9 @@
     "icon": "./assets/icon.png",
     "scheme": "storyplanner",
     "userInterfaceStyle": "automatic",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.jordufi.storyplanner"
@@ -17,8 +19,16 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#2f1d59"
-      }
+      },
+      "versionCode": 2
     },
-    "plugins": ["expo-sqlite"]
+    "plugins": [
+      "expo-sqlite"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f4a05c70-52b2-47c5-bf48-79d4796ebc9a"
+      }
+    }
   }
 }

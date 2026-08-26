@@ -13,7 +13,8 @@ import {
   type TextInputProps,
 } from 'react-native';
 import { RADIUS, SPACING, roleColors, useTheme, type Theme } from './theme';
-import { ROLE_LABELS, type CharacterRole } from '../types';
+import { useT } from '../state/useSettings';
+import type { CharacterRole } from '../types';
 
 // --- Texto -------------------------------------------------------------------
 
@@ -30,7 +31,8 @@ export function Subtle({ children }: { children: ReactNode }) {
 /** Texto largo de una ficha, con el aviso habitual cuando está vacío. */
 export function Prose({ text }: { text: string | null }) {
   const t = useTheme();
-  if (!text) return <Text style={{ color: t.textDim, fontStyle: 'italic' }}>Sin rellenar.</Text>;
+  const i18n = useT();
+  if (!text) return <Text style={{ color: t.textDim, fontStyle: 'italic' }}>{i18n.common.notFilled}</Text>;
   return <Text style={{ color: t.text, lineHeight: 21 }}>{text}</Text>;
 }
 
@@ -196,12 +198,13 @@ export function Badge({
 
 export function RoleBadge({ role }: { role: CharacterRole }) {
   const t = useTheme();
+  const i18n = useT();
   const c = roleColors(t, role);
   return (
     <View
       style={{ backgroundColor: c.bg, borderRadius: 99, paddingHorizontal: 8, paddingVertical: 2 }}
     >
-      <Text style={{ color: c.fg, fontSize: 11, fontWeight: '700' }}>{ROLE_LABELS[role]}</Text>
+      <Text style={{ color: c.fg, fontSize: 11, fontWeight: '700' }}>{i18n.roles[role]}</Text>
     </View>
   );
 }
@@ -328,7 +331,7 @@ export function Select<T extends string>({
   value,
   options,
   onChange,
-  placeholder = 'Elegir…',
+  placeholder,
   searchThreshold = 8,
 }: {
   value: T | '';
@@ -338,8 +341,10 @@ export function Select<T extends string>({
   searchThreshold?: number;
 }) {
   const t = useTheme();
+  const i18n = useT();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const resolvedPlaceholder = placeholder ?? i18n.common.choosePlaceholder;
 
   const selected = options.find((o) => o.value === value);
   const needle = query.trim().toLowerCase();
@@ -366,7 +371,7 @@ export function Select<T extends string>({
         }}
       >
         <Text style={{ flex: 1, color: selected ? t.text : t.textDim }} numberOfLines={1}>
-          {selected?.label ?? placeholder}
+          {selected?.label ?? resolvedPlaceholder}
         </Text>
         <Text style={{ color: t.textDim }}>{open ? '▴' : '▾'}</Text>
       </Pressable>
@@ -383,14 +388,19 @@ export function Select<T extends string>({
         >
           {options.length > searchThreshold && (
             <View style={{ padding: 8, borderBottomWidth: 1, borderBottomColor: t.border }}>
-              <Input value={query} onChangeText={setQuery} placeholder="Buscar…" autoFocus />
+              <Input
+                value={query}
+                onChangeText={setQuery}
+                placeholder={i18n.common.searchPlaceholder}
+                autoFocus
+              />
             </View>
           )}
 
           <ScrollView style={{ maxHeight: 240 }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
             {filtered.length === 0 && (
               <Text style={{ padding: 12, color: t.textDim, fontStyle: 'italic' }}>
-                Nada coincide con “{query}”.
+                {i18n.common.noMatch(query)}
               </Text>
             )}
             {filtered.map((o) => {
@@ -440,6 +450,7 @@ export function Sheet({
   footer?: ReactNode;
 }) {
   const t = useTheme();
+  const i18n = useT();
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       {/* Aquí sí va KeyboardAvoidingView y no automaticallyAdjustKeyboardInsets:
@@ -473,7 +484,7 @@ export function Sheet({
             <Pressable
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel="Cerrar"
+              accessibilityLabel={i18n.common.close}
               hitSlop={12}
             >
               <Text style={{ fontSize: 20, color: t.textDim }}>✕</Text>
@@ -507,20 +518,22 @@ export function Sheet({
   );
 }
 
-export function Spinner({ label = 'Cargando…' }: { label?: string }) {
+export function Spinner({ label }: { label?: string }) {
   const t = useTheme();
+  const i18n = useT();
   return (
     <View style={{ padding: 32, alignItems: 'center', gap: 8 }}>
       <ActivityIndicator color={t.accent} />
-      <Subtle>{label}</Subtle>
+      <Subtle>{label ?? i18n.common.loading}</Subtle>
     </View>
   );
 }
 
 export function ErrorBanner({ error }: { error: unknown }) {
   const t = useTheme();
+  const i18n = useT();
   if (!error) return null;
-  const message = error instanceof Error ? error.message : 'Ha ocurrido un error';
+  const message = error instanceof Error ? error.message : i18n.common.errorGeneric;
   return (
     <View
       style={{

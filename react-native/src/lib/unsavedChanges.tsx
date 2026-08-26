@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { Alert } from 'react-native';
 import { useNavigation, usePreventRemove } from '@react-navigation/native';
+import { useT } from '../state/useSettings';
 
 interface Registry {
   report: (id: symbol, dirty: boolean) => void;
@@ -30,13 +31,14 @@ const UnsavedContext = createContext<Registry | null>(null);
  * desmonta, así que el borrador sigue ahí— ni que el sistema mate la app.
  */
 export function UnsavedChangesGuard({
-  message = 'Hay cambios sin guardar. Si sales ahora se perderán.',
+  message,
   children,
 }: {
   message?: string;
   children: ReactNode;
 }) {
   const navigation = useNavigation();
+  const i18n = useT();
   const [dirtyIds, setDirtyIds] = useState<symbol[]>([]);
 
   const report = useCallback((id: symbol, dirty: boolean) => {
@@ -48,10 +50,10 @@ export function UnsavedChangesGuard({
   }, []);
 
   usePreventRemove(dirtyIds.length > 0, ({ data }) => {
-    Alert.alert('Cambios sin guardar', message, [
-      { text: 'Seguir editando', style: 'cancel' },
+    Alert.alert(i18n.unsaved.alertTitle, message ?? i18n.unsaved.default, [
+      { text: i18n.unsaved.keepEditing, style: 'cancel' },
       {
-        text: 'Descartar',
+        text: i18n.unsaved.discard,
         style: 'destructive',
         onPress: () => navigation.dispatch(data.action),
       },

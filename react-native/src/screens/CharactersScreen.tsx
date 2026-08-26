@@ -20,15 +20,16 @@ import {
 import { SPACING } from '../ui/theme';
 import { useCharacters, useCreateCharacter } from '../data/hooks';
 import { useActiveBook } from '../state/useActiveBook';
+import { useT } from '../state/useSettings';
 import type { CharactersListProps } from '../navigation';
-import { CHARACTER_ROLES, ROLE_LABELS, type CharacterRole } from '../types';
-
-const ROLE_OPTIONS = CHARACTER_ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r] }));
+import { CHARACTER_ROLES, type CharacterRole } from '../types';
 
 export function CharactersScreen({ navigation }: CharactersListProps) {
+  const i18n = useT();
   const { bookId } = useActiveBook();
   const { data: characters, isLoading, error } = useCharacters(bookId);
   const create = useCreateCharacter(bookId);
+  const roleOptions = CHARACTER_ROLES.map((r) => ({ value: r, label: i18n.roles[r] }));
 
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
@@ -37,7 +38,7 @@ export function CharactersScreen({ navigation }: CharactersListProps) {
   if (!bookId) {
     return (
       <Screen>
-        <Placeholder title="Sin libro" message="Crea un libro en la pestaña Libros para empezar." />
+        <Placeholder title={i18n.common.noBookTitle} message={i18n.common.noBookMessage} />
       </Screen>
     );
   }
@@ -69,13 +70,17 @@ export function CharactersScreen({ navigation }: CharactersListProps) {
           <View style={{ gap: SPACING }}>
             <ErrorBanner error={error ?? create.error} />
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Subtle>{list.length === 1 ? '1 personaje' : `${list.length} personajes`}</Subtle>
+              <Subtle>{i18n.characters.count(list.length)}</Subtle>
               <View style={{ flex: 1 }} />
-              <Button label="+ Personaje" variant="primary" onPress={() => setCreating(true)} />
+              <Button
+                label={i18n.characters.newCharacter}
+                variant="primary"
+                onPress={() => setCreating(true)}
+              />
             </View>
           </View>
         }
-        ListEmptyComponent={<EmptyNote>Todavía no hay personajes en este libro.</EmptyNote>}
+        ListEmptyComponent={<EmptyNote>{i18n.characters.empty}</EmptyNote>}
         renderItem={({ item }) => (
           <Card onPress={() => navigation.navigate('CharacterDetail', { characterId: item.id })}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING }}>
@@ -95,13 +100,13 @@ export function CharactersScreen({ navigation }: CharactersListProps) {
 
       <Sheet
         visible={creating}
-        title="Nuevo personaje"
+        title={i18n.characters.newSheetTitle}
         onClose={() => setCreating(false)}
         footer={
           <>
-            <Button label="Cancelar" onPress={() => setCreating(false)} style={{ flex: 1 }} />
+            <Button label={i18n.common.cancel} onPress={() => setCreating(false)} style={{ flex: 1 }} />
             <Button
-              label={create.isPending ? 'Creando…' : 'Crear'}
+              label={create.isPending ? i18n.common.creating : i18n.common.create}
               variant="primary"
               disabled={!name.trim() || create.isPending}
               onPress={submit}
@@ -112,11 +117,11 @@ export function CharactersScreen({ navigation }: CharactersListProps) {
       >
         {/* Sólo el nombre es obligatorio: hay que poder esbozar un personaje y
             rellenar su ficha más tarde. */}
-        <Field label="Nombre">
-          <Input value={name} onChangeText={setName} placeholder="Cómo se llama" autoFocus />
+        <Field label={i18n.characters.fieldName}>
+          <Input value={name} onChangeText={setName} placeholder={i18n.characters.namePlaceholder} autoFocus />
         </Field>
-        <Field label="Rol">
-          <Choice value={role} options={ROLE_OPTIONS} onChange={setRole} />
+        <Field label={i18n.characters.fieldRole}>
+          <Choice value={role} options={roleOptions} onChange={setRole} />
         </Field>
       </Sheet>
     </Screen>

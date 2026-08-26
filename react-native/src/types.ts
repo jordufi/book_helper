@@ -1,12 +1,8 @@
 export const CHARACTER_ROLES = ['PROTAGONIST', 'ANTAGONIST', 'SECONDARY', 'EXTRA'] as const;
 export type CharacterRole = (typeof CHARACTER_ROLES)[number];
 
-export const ROLE_LABELS: Record<CharacterRole, string> = {
-  PROTAGONIST: 'Protagonista',
-  ANTAGONIST: 'Antagonista',
-  SECONDARY: 'Secundario',
-  EXTRA: 'Figurante',
-};
+// Las etiquetas legibles de cada rol viven en `t.roles` (`src/i18n/`), no
+// aquí: dependen del idioma activo, así que no pueden ser una constante fija.
 
 /**
  * Las formas son deliberadamente las MISMAS que en `react/src/types.ts`: es lo

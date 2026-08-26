@@ -28,6 +28,7 @@ import {
   useUpdateChapter,
 } from '../data/hooks';
 import { UnsavedChangesGuard, useReportUnsaved } from '../lib/unsavedChanges';
+import { useT } from '../state/useSettings';
 import type { ChapterDetailProps } from '../navigation';
 import type { Chapter, ChapterPatch, CharacterSummary } from '../types';
 
@@ -56,6 +57,7 @@ const fromChapter = (c: Chapter): Draft => ({
  * capítulo entero pisaría el otro panel con una copia obsoleta.
  */
 function ChapterTextPanels({ chapter, bookId }: { chapter: Chapter; bookId: string | null }) {
+  const i18n = useT();
   const update = useUpdateChapter(bookId);
   const [draft, setDraft] = useState<Draft>(() => fromChapter(chapter));
   const [shown, setShown] = useState<'A' | 'B'>('A');
@@ -111,7 +113,7 @@ function ChapterTextPanels({ chapter, bookId }: { chapter: Chapter; bookId: stri
         onChange={(v) => setShown(v as 'A' | 'B')}
       />
 
-      <Field label="Rótulo del panel">
+      <Field label={i18n.chapterDetail.panelLabelField}>
         <Input
           value={label}
           onChangeText={(v) => setDraft((d) => ({ ...d, [isA ? 'textALabel' : 'textBLabel']: v }))}
@@ -122,16 +124,16 @@ function ChapterTextPanels({ chapter, bookId }: { chapter: Chapter; bookId: stri
         value={value}
         onChangeText={(v) => setDraft((d) => ({ ...d, [isA ? 'textA' : 'textB']: v }))}
         multiline
-        placeholder="Escribe aquí el capítulo…"
+        placeholder={i18n.chapterDetail.textPlaceholder}
         style={{ minHeight: 260 }}
       />
-      <Subtle>{words} palabras</Subtle>
+      <Subtle>{i18n.chapterDetail.words(words)}</Subtle>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        {dirty && <Badge label="Cambios sin guardar" tone="accent" />}
+        {dirty && <Badge label={i18n.chapterDetail.unsavedBadge} tone="accent" />}
         <View style={{ flex: 1 }} />
         <Button
-          label={update.isPending ? 'Guardando…' : 'Guardar texto'}
+          label={update.isPending ? i18n.common.saving : i18n.chapterDetail.saveText}
           variant="primary"
           onPress={save}
           disabled={!dirty || update.isPending}
@@ -151,6 +153,7 @@ function ChapterCastEditor({
   candidates: CharacterSummary[];
   bookId: string | null;
 }) {
+  const i18n = useT();
   const save = useSaveCast(bookId);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<{ characterId: string; action: string }[]>([]);
@@ -187,7 +190,7 @@ function ChapterCastEditor({
     return (
       <>
         {chapter.cast.length === 0 ? (
-          <EmptyNote>Nadie asignado. Añade quién sale y qué hace.</EmptyNote>
+          <EmptyNote>{i18n.chapterDetail.castEmpty}</EmptyNote>
         ) : (
           chapter.cast.map((entry) => (
             <View
@@ -202,7 +205,10 @@ function ChapterCastEditor({
             </View>
           ))
         )}
-        <Button label={chapter.cast.length ? 'Editar reparto' : 'Añadir reparto'} onPress={start} />
+        <Button
+          label={chapter.cast.length ? i18n.chapterDetail.editCast : i18n.chapterDetail.addCast}
+          onPress={start}
+        />
       </>
     );
   }
@@ -214,10 +220,10 @@ function ChapterCastEditor({
         <View key={entry.characterId} style={{ gap: 6, paddingBottom: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Avatar name={byId.get(entry.characterId)?.name ?? '?'} size={28} />
-            <Title>{byId.get(entry.characterId)?.name ?? 'Personaje'}</Title>
+            <Title>{byId.get(entry.characterId)?.name ?? i18n.chapterDetail.unnamedCharacter}</Title>
             <View style={{ flex: 1 }} />
             <Button
-              label="Quitar"
+              label={i18n.chapterDetail.removeFromCast}
               variant="danger"
               onPress={() => setDraft((d) => d.filter((_, j) => j !== i))}
             />
@@ -227,7 +233,7 @@ function ChapterCastEditor({
             onChangeText={(v) =>
               setDraft((d) => d.map((e, j) => (i === j ? { ...e, action: v } : e)))
             }
-            placeholder="Qué hace en este capítulo"
+            placeholder={i18n.chapterDetail.castActionPlaceholder}
             multiline
           />
         </View>
@@ -236,25 +242,25 @@ function ChapterCastEditor({
       {/* El selector excluye a quien ya está: así no se llega siquiera al error
           de "un personaje no puede aparecer dos veces". */}
       {available.length > 0 && (
-        <Field label="Añadir personaje">
+        <Field label={i18n.chapterDetail.addCharacterField}>
           <Select
             value=""
             options={available.map((c) => ({ value: c.id, label: c.name }))}
             onChange={(id) => setDraft((d) => [...d, { characterId: id, action: '' }])}
-            placeholder="+ Añadir personaje…"
+            placeholder={i18n.chapterDetail.addCharacterPlaceholder}
           />
         </Field>
       )}
 
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Button
-          label="Cancelar"
+          label={i18n.common.cancel}
           onPress={() => setEditing(false)}
           disabled={save.isPending}
           style={{ flex: 1 }}
         />
         <Button
-          label={save.isPending ? 'Guardando…' : 'Guardar reparto'}
+          label={save.isPending ? i18n.common.saving : i18n.chapterDetail.saveCast}
           variant="primary"
           onPress={submit}
           disabled={save.isPending}
@@ -266,6 +272,7 @@ function ChapterCastEditor({
 }
 
 export function ChapterDetailScreen({ route, navigation }: ChapterDetailProps) {
+  const i18n = useT();
   const { chapterId } = route.params;
   const { data: chapter, isLoading, error } = useChapter(chapterId);
   // El libro sale del PROPIO capítulo, no del libro activo. La ficha no se
@@ -302,49 +309,45 @@ export function ChapterDetailScreen({ route, navigation }: ChapterDetailProps) {
   if (!chapter)
     return (
       <Screen>
-        <EmptyNote>Capítulo no encontrado.</EmptyNote>
+        <EmptyNote>{i18n.chapterDetail.notFound}</EmptyNote>
       </Screen>
     );
 
   const confirmDelete = () =>
-    Alert.alert(
-      'Borrar capítulo',
-      `¿Borrar "${chapter.title}"? Se perderán su texto y su reparto.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Borrar',
-          style: 'destructive',
-          onPress: async () => {
-            await remove.mutateAsync(chapter.id);
-            navigation.goBack();
-          },
+    Alert.alert(i18n.chapterDetail.confirmDeleteTitle, i18n.chapterDetail.confirmDeleteBody(chapter.title), [
+      { text: i18n.common.cancel, style: 'cancel' },
+      {
+        text: i18n.common.delete,
+        style: 'destructive',
+        onPress: async () => {
+          await remove.mutateAsync(chapter.id);
+          navigation.goBack();
         },
-      ],
-    );
+      },
+    ]);
 
   return (
-    <UnsavedChangesGuard message="Hay cambios sin guardar en este capítulo. Si sales ahora se perderán.">
+    <UnsavedChangesGuard message={i18n.chapterDetail.unsavedMessage}>
       <Screen>
         <ScreenScroll contentContainerStyle={{ padding: SPACING + 4, paddingBottom: 48 }}>
-          <Subtle>Capítulo {chapter.position + 1}</Subtle>
+          <Subtle>{i18n.chapterDetail.position(chapter.position + 1)}</Subtle>
           <Title>{chapter.title}</Title>
 
           <View style={{ flexDirection: 'row', gap: 8, marginVertical: SPACING }}>
-            <Button label="Editar" onPress={() => setEditing(true)} style={{ flex: 1 }} />
-            <Button label="Borrar" variant="danger" onPress={confirmDelete} style={{ flex: 1 }} />
+            <Button label={i18n.common.edit} onPress={() => setEditing(true)} style={{ flex: 1 }} />
+            <Button label={i18n.common.delete} variant="danger" onPress={confirmDelete} style={{ flex: 1 }} />
           </View>
 
-          <Section title="Sinopsis" filled={!!chapter.synopsis}>
+          <Section title={i18n.chapterDetail.sectionSynopsis} filled={!!chapter.synopsis}>
             <Prose text={chapter.synopsis} />
           </Section>
-          <Section title="Reparto" filled={chapter.cast.length > 0}>
+          <Section title={i18n.chapterDetail.sectionCast} filled={chapter.cast.length > 0}>
             <ChapterCastEditor chapter={chapter} candidates={characters ?? []} bookId={bookId} />
           </Section>
-          <Section title="Texto" filled={!!chapter.textA || !!chapter.textB}>
+          <Section title={i18n.chapterDetail.sectionText} filled={!!chapter.textA || !!chapter.textB}>
             <ChapterTextPanels chapter={chapter} bookId={bookId} />
           </Section>
-          <Section title="Notas" filled={!!chapter.notes} defaultOpen={false}>
+          <Section title={i18n.chapterDetail.sectionNotes} filled={!!chapter.notes} defaultOpen={false}>
             <Prose text={chapter.notes} />
           </Section>
         </ScreenScroll>
@@ -376,6 +379,7 @@ function ChapterForm({
   onClose: () => void;
   onSubmit: (values: ChapterPatch) => void;
 }) {
+  const i18n = useT();
   const [title, setTitle] = useState(chapter.title);
   const [synopsis, setSynopsis] = useState(chapter.synopsis ?? '');
   const [notes, setNotes] = useState(chapter.notes ?? '');
@@ -383,13 +387,13 @@ function ChapterForm({
   return (
     <Sheet
       visible
-      title="Editar capítulo"
+      title={i18n.chapterDetail.editTitle}
       onClose={onClose}
       footer={
         <>
-          <Button label="Cancelar" onPress={onClose} style={{ flex: 1 }} />
+          <Button label={i18n.common.cancel} onPress={onClose} style={{ flex: 1 }} />
           <Button
-            label={pending ? 'Guardando…' : 'Guardar'}
+            label={pending ? i18n.common.saving : i18n.common.save}
             variant="primary"
             disabled={!title.trim() || pending}
             onPress={() =>
@@ -404,13 +408,13 @@ function ChapterForm({
         </>
       }
     >
-      <Field label="Título">
+      <Field label={i18n.chapterDetail.fieldTitle}>
         <Input value={title} onChangeText={setTitle} />
       </Field>
-      <Field label="Sinopsis" hint="Qué ocurre en el capítulo">
+      <Field label={i18n.chapterDetail.fieldSynopsis} hint={i18n.chapterDetail.synopsisHint}>
         <Input value={synopsis} onChangeText={setSynopsis} multiline />
       </Field>
-      <Field label="Notas">
+      <Field label={i18n.chapterDetail.fieldNotes}>
         <Input value={notes} onChangeText={setNotes} multiline />
       </Field>
     </Sheet>

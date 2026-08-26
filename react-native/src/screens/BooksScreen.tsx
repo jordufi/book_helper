@@ -21,6 +21,7 @@ import { SPACING, useTheme } from '../ui/theme';
 import { useCreateBook, useDeleteBook, useImportBook, useUpdateBook } from '../data/hooks';
 import { exportBook } from '../db/transfer';
 import { useActiveBook } from '../state/useActiveBook';
+import { useT } from '../state/useSettings';
 import type { Book } from '../types';
 
 /** Nombre de fichero a partir del título: sin acentos, minúsculas, con guiones. */
@@ -49,6 +50,7 @@ function BookForm({
   onClose: () => void;
   onSubmit: (values: { title: string; author: string | null; synopsis: string | null }) => void;
 }) {
+  const i18n = useT();
   const [title, setTitle] = useState(book?.title ?? '');
   const [author, setAuthor] = useState(book?.author ?? '');
   const [synopsis, setSynopsis] = useState(book?.synopsis ?? '');
@@ -56,13 +58,13 @@ function BookForm({
   return (
     <Sheet
       visible={visible}
-      title={book ? 'Editar libro' : 'Nuevo libro'}
+      title={book ? i18n.books.editTitle : i18n.books.newTitle}
       onClose={onClose}
       footer={
         <>
-          <Button label="Cancelar" onPress={onClose} style={{ flex: 1 }} />
+          <Button label={i18n.common.cancel} onPress={onClose} style={{ flex: 1 }} />
           <Button
-            label={pending ? 'Guardando…' : 'Guardar'}
+            label={pending ? i18n.common.saving : i18n.common.save}
             variant="primary"
             disabled={!title.trim() || pending}
             onPress={() =>
@@ -77,18 +79,18 @@ function BookForm({
         </>
       }
     >
-      <Field label="Título">
+      <Field label={i18n.books.fieldTitle}>
         <Input
           value={title}
           onChangeText={setTitle}
-          placeholder="El nombre de tu novela"
+          placeholder={i18n.books.titlePlaceholder}
           autoFocus
         />
       </Field>
-      <Field label="Autor">
-        <Input value={author} onChangeText={setAuthor} placeholder="Quién la escribe" />
+      <Field label={i18n.books.fieldAuthor}>
+        <Input value={author} onChangeText={setAuthor} placeholder={i18n.books.authorPlaceholder} />
       </Field>
-      <Field label="Sinopsis" hint="De qué va, en un párrafo">
+      <Field label={i18n.books.fieldSynopsis} hint={i18n.books.synopsisHint}>
         <Input value={synopsis} onChangeText={setSynopsis} multiline />
       </Field>
     </Sheet>
@@ -97,6 +99,7 @@ function BookForm({
 
 export function BooksScreen() {
   const t = useTheme();
+  const i18n = useT();
   const { books, bookId, setBookId, isLoading, error } = useActiveBook();
   const create = useCreateBook();
   const update = useUpdateBook();
@@ -124,10 +127,10 @@ export function BooksScreen() {
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(file.uri, {
           mimeType: 'application/json',
-          dialogTitle: `Exportar "${book.title}"`,
+          dialogTitle: i18n.books.exportDialogTitle(book.title),
         });
       } else {
-        Alert.alert('Exportado', `Guardado en:\n${file.uri}`);
+        Alert.alert(i18n.books.exportedAlertTitle, i18n.books.exportedAlertBody(file.uri));
       }
     } catch (err) {
       setTransferError(err);
@@ -154,26 +157,22 @@ export function BooksScreen() {
       try {
         parsed = JSON.parse(content);
       } catch {
-        throw new Error('El fichero no es un JSON válido');
+        throw new Error(i18n.books.invalidJson);
       }
 
       const book = await importBook.mutateAsync(parsed);
       setBookId(book.id);
-      Alert.alert('Importado', `"${book.title}" ya está en el dispositivo.`);
+      Alert.alert(i18n.books.importedAlertTitle, i18n.books.importedAlertBody(book.title));
     } catch (err) {
       setTransferError(err);
     }
   };
 
   const confirmDelete = (book: Book) => {
-    Alert.alert(
-      'Borrar libro',
-      `¿Borrar "${book.title}"? Se perderán sus personajes, capítulos y toda su trama. No se puede deshacer.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Borrar', style: 'destructive', onPress: () => remove.mutate(book.id) },
-      ],
-    );
+    Alert.alert(i18n.books.confirmDeleteTitle, i18n.books.confirmDeleteBody(book.title), [
+      { text: i18n.common.cancel, style: 'cancel' },
+      { text: i18n.common.delete, style: 'destructive', onPress: () => remove.mutate(book.id) },
+    ]);
   };
 
   if (isLoading)
@@ -191,7 +190,7 @@ export function BooksScreen() {
         contentContainerStyle={{ padding: SPACING + 4, gap: SPACING, paddingBottom: 40 }}
         ListHeaderComponent={
           <View style={{ gap: SPACING }}>
-            <Title>Libros</Title>
+            <Title>{i18n.books.title}</Title>
             <ErrorBanner
               error={
                 error ??
@@ -204,13 +203,13 @@ export function BooksScreen() {
             />
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <Button
-                label="+ Libro"
+                label={i18n.books.newBook}
                 variant="primary"
                 onPress={() => setCreating(true)}
                 style={{ flex: 1 }}
               />
               <Button
-                label={importBook.isPending ? 'Importando…' : 'Importar JSON'}
+                label={importBook.isPending ? i18n.books.importing : i18n.books.importJson}
                 onPress={handleImport}
                 disabled={importBook.isPending}
                 style={{ flex: 1 }}
@@ -218,31 +217,35 @@ export function BooksScreen() {
             </View>
           </View>
         }
-        ListEmptyComponent={
-          <EmptyNote>Todavía no hay libros. Crea el primero para empezar.</EmptyNote>
-        }
+        ListEmptyComponent={<EmptyNote>{i18n.books.empty}</EmptyNote>}
         renderItem={({ item }) => (
           <Card>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <Title>{item.title}</Title>
-              {item.id === bookId && <Badge label="Activo" tone="accent" />}
+              {item.id === bookId && <Badge label={i18n.books.active} tone="accent" />}
             </View>
             <Subtle>
               {[
                 item.author,
-                `${item._count?.characters ?? 0} personajes`,
-                `${item._count?.chapters ?? 0} capítulos`,
-                `${item._count?.plotEvents ?? 0} sucesos`,
+                i18n.books.charactersLabel(item._count?.characters ?? 0),
+                i18n.books.chaptersLabel(item._count?.chapters ?? 0),
+                i18n.books.eventsLabel(item._count?.plotEvents ?? 0),
               ]
                 .filter(Boolean)
                 .join(' · ')}
             </Subtle>
 
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: SPACING }}>
-              {item.id !== bookId && <Button label="Activar" onPress={() => setBookId(item.id)} />}
-              <Button label="Editar" variant="ghost" onPress={() => setEditing(item)} />
-              <Button label="Exportar" variant="ghost" onPress={() => void handleExport(item)} />
-              <Button label="Borrar" variant="danger" onPress={() => confirmDelete(item)} />
+              {item.id !== bookId && (
+                <Button label={i18n.books.activate} onPress={() => setBookId(item.id)} />
+              )}
+              <Button label={i18n.common.edit} variant="ghost" onPress={() => setEditing(item)} />
+              <Button
+                label={i18n.books.export}
+                variant="ghost"
+                onPress={() => void handleExport(item)}
+              />
+              <Button label={i18n.common.delete} variant="danger" onPress={() => confirmDelete(item)} />
             </View>
           </Card>
         )}

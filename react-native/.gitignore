@@ -14,4 +14,7 @@ web-build/
 *.key
 *.mobileprovision
 
+# Clave de la service account de Google Cloud para `eas submit` (Play Console API).
+google-service-account.json
+
 .DS_Store
