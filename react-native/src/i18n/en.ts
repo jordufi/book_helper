@@ -239,9 +239,10 @@ export const en: Dict = {
     themeSystem: 'System',
     languageLabel: 'Language',
     // Language names are always shown in their own language (endonyms), so
-    // they're recognizable even while the UI is in the other one.
+    // they're recognizable even while the UI is in another one.
     languageEs: 'Español',
     languageEn: 'English',
+    languageFr: 'Français',
   },
 
   app: {

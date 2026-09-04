@@ -20,8 +20,13 @@ interface SettingsValue {
 
 const SettingsContext = createContext<SettingsValue | null>(null);
 
+// Se comprueba contra las claves de `dictionaries` en vez de repetir la unión
+// a mano: así añadir un idioma es tocar `i18n/index.ts` y nada más. Con la
+// lista duplicada aquí, un idioma nuevo se elegía bien pero no sobrevivía al
+// reinicio de la app —`getItem` devolvía algo que esta función rechazaba— y
+// el fallo era silencioso, porque TypeScript no ve el contenido del storage.
 function isLocale(value: string | null): value is Locale {
-  return value === 'es' || value === 'en';
+  return value !== null && Object.keys(dictionaries).includes(value);
 }
 
 function isThemeMode(value: string | null): value is ThemeMode {

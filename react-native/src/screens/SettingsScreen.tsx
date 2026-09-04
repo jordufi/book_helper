@@ -22,6 +22,7 @@ export function SettingsScreen() {
   const localeOptions: { value: Locale; label: string }[] = [
     { value: 'es', label: i18n.settings.languageEs },
     { value: 'en', label: i18n.settings.languageEn },
+    { value: 'fr', label: i18n.settings.languageFr },
   ];
 
   return (

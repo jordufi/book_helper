@@ -14,6 +14,7 @@ Es una app de Expo (SDK 57) escrita en TypeScript.
 | Red | Necesaria (la API en la Wi-Fi) | **Ninguna** |
 | Fotos de personajes | Sí | Todavía no |
 | Vista "Libro" (resumen) y export a Markdown | Sí | Todavía no |
+| Idioma de la interfaz | Sólo español | Español, inglés y **francés** |
 
 Lo demás está: libros, personajes (con arco y relaciones), capítulos (con
 reparto y los dos paneles de texto) y trama (sucesos y promesas).
@@ -121,10 +122,41 @@ sistema con el `.json` generado.
 Importar siempre crea un libro **nuevo**; nunca sobrescribe ni fusiona. Las
 fotos no viajan en el JSON (en ninguna de las dos apps).
 
+## Idiomas
+
+La interfaz está en **español, inglés y francés**. Se elige en la pestaña
+*Ajustes* → *Langue* y se guarda en el dispositivo (`expo-sqlite/kv-store`),
+igual que el tema. Por defecto arranca en español.
+
+Sólo se traduce la **interfaz**. Lo que escribe el usuario —títulos, sinopsis,
+texto de los capítulos— se guarda tal cual: cambiar de idioma no toca los
+datos, y el JSON de export/import es el mismo en los tres.
+
+Para **añadir un idioma** hacen falta dos ficheros y nada más:
+
+1. Copia `src/i18n/es.ts` a `src/i18n/<código>.ts` y traduce los valores.
+   Tipa el objeto como `Dict` (igual que hacen `en.ts` y `fr.ts`): si te
+   dejas una clave o cambias los parámetros de una función, `npm run
+   typecheck` no compila. Es la única red de seguridad que hay aquí, porque
+   la app móvil no tiene tests.
+2. Añádelo a `dictionaries` y a `Locale` en `src/i18n/index.ts`, y mete una
+   opción más en `localeOptions` de `src/screens/SettingsScreen.tsx`.
+
+`isLocale` (en `src/state/useSettings.tsx`) **no** hay que tocarlo: valida
+contra las claves de `dictionaries`. Antes repetía la unión a mano, y
+olvidarla no daba error de compilación — el idioma nuevo se podía elegir,
+pero al reabrir la app volvía al español porque el valor guardado se
+rechazaba al leerlo.
+
+Los nombres de los idiomas se muestran siempre en su propio idioma
+("Español", "English", "Français") para que se reconozcan aunque la interfaz
+esté en otro.
+
 ## Estructura
 
 ```
 src/
+├── i18n/          diccionarios de la interfaz (es, en, fr) y el tipo `Dict`
 ├── db/            SQLite: esquema, migraciones y consultas
 │   ├── schema.ts        DDL (traducción del schema de Prisma)
 │   ├── database.ts      apertura, PRAGMA y migraciones por user_version
@@ -179,6 +211,10 @@ src/
   en la cabecera como en la web. Cubre atrás, el gesto y el atrás de Android;
   no cubre cambiar de pestaña, porque ahí la pantalla no se desmonta y el
   borrador sigue intacto.
+- **`fr.ts` pone el plural en `n < 2` y no en `n === 1`** como `es.ts` y
+  `en.ts`. No es una errata: en francés el cero va en singular ("0
+  personnage"). Por lo mismo usa comillas « » y espacio antes de « ? » y
+  « : », que es la tipografía correcta en francés y no un espacio de más.
 - **`ScreenScroll` usa `automaticallyAdjustKeyboardInsets` y no
   `KeyboardAvoidingView`**: éste necesitaría la altura de la cabecera, que vive
   en un paquete que aquí sólo es dependencia transitiva. Dentro del `Sheet` sí

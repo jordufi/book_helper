@@ -247,9 +247,10 @@ export const es = {
     themeSystem: 'Sistema',
     languageLabel: 'Idioma',
     // Los nombres de idioma se muestran siempre en su propio idioma
-    // (endónimos), para que se reconozcan aunque la UI esté en el otro.
+    // (endónimos), para que se reconozcan aunque la UI esté en otro.
     languageEs: 'Español',
     languageEn: 'English',
+    languageFr: 'Français',
   },
 
   app: {
