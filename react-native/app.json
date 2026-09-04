@@ -20,7 +20,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#2f1d59"
       },
-      "versionCode": 2
+      "versionCode": 3
     },
     "plugins": [
       "expo-sqlite"
