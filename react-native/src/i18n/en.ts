@@ -243,6 +243,55 @@ export const en: Dict = {
     languageEs: 'Español',
     languageEn: 'English',
     languageFr: 'Français',
+    aboutLabel: 'About the app',
+    rateApp: 'Rate the app',
+    privacyPolicy: 'Go to Privacy Policy and Terms of Service',
+    showWalkthrough: 'See walkthrough again',
+    linkErrorTitle: 'Could not open the link',
+    linkErrorBody: (url: string) => `Open it by hand in your browser:\n\n${url}`,
+  },
+
+  walkthrough: {
+    title: 'How Story Planner works',
+    stepOf: (current: number, total: number) => `Step ${current} of ${total}`,
+    back: 'Back',
+    next: 'Next',
+    done: 'Get started',
+    dontShowAgain: "Don't show again",
+    steps: [
+      {
+        icon: '📚',
+        title: 'Start with a book',
+        body: 'Everything hangs off a book: create one in the Books tab with its title, author and synopsis. Whichever book you pick there is the one the other tabs show.',
+      },
+      {
+        icon: '🧵',
+        title: 'Lay out the plot',
+        body: 'In Plot you place the key events in the order they happen and track the promises you make to the reader: what is set up, and which event pays it off.',
+      },
+      {
+        icon: '👥',
+        title: 'Shape your characters',
+        body: 'Each character has a role, looks, personality, backstory, an arc in stages and relationships with the rest. The plot is what happens to them; the arc is how they change inside.',
+      },
+      {
+        icon: '📖',
+        title: 'Plan the chapters',
+        body: 'Order your chapters, give each one its cast, and write in two independent text panels: a first draft and its revision, for example.',
+      },
+      {
+        icon: '💾',
+        title: 'Your data stays yours',
+        body: 'Everything is stored on this device, with no account and no connection. From Books you can export any book as a JSON file to back it up or move it to another device.',
+      },
+    ],
+  },
+
+  exit: {
+    title: 'Leave Story Planner',
+    message: 'Do you want to close the app?',
+    confirm: 'Exit',
+    cancel: 'Stay here',
   },
 
   app: {

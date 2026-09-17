@@ -2,7 +2,7 @@
   "expo": {
     "name": "Story Planner",
     "slug": "story-planner",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "scheme": "storyplanner",
@@ -20,7 +20,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#2f1d59"
       },
-      "versionCode": 3
+      "versionCode": 4
     },
     "plugins": [
       "expo-sqlite"

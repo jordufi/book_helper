@@ -1,0 +1,155 @@
+{
+  "book": {
+    "title": "Libro de ejemplo",
+    "author": "Autor de ejemplo",
+    "synopsis": "Sinopsis de ejemplo. Tres personajes, tres capítulos y varias promesas que se abren en un capítulo y se cierran en otro."
+  },
+  "characters": [
+    {
+      "id": "p1",
+      "name": "Personaje 1",
+      "role": "PROTAGONIST",
+      "age": "unos treinta",
+      "physicalDescription": "Descripción física del personaje 1.",
+      "personality": "Personalidad del personaje 1.",
+      "backstory": "Pasado del personaje 1.",
+      "personalPlot": "Lo que le ocurre al personaje 1 a lo largo del libro.",
+      "arcSummary": "Cómo cambia por dentro el personaje 1.",
+      "notes": "Notas del personaje 1.",
+      "arcStages": [
+        { "title": "Etapa 1: punto de partida", "description": "Cómo empieza el personaje 1." },
+        { "title": "Etapa 2: crisis", "description": "Lo que le obliga a cambiar." },
+        { "title": "Etapa 3: transformación", "description": "Cómo termina el personaje 1." }
+      ],
+      "relationships": [
+        { "relatedCharacterId": "p2", "type": "amigo", "description": "El personaje 1 confía en el personaje 2." },
+        { "relatedCharacterId": "p3", "type": "rival", "description": "El personaje 1 desconfía del personaje 3." }
+      ]
+    },
+    {
+      "id": "p2",
+      "name": "Personaje 2",
+      "role": "SECONDARY",
+      "age": "unos cuarenta",
+      "physicalDescription": "Descripción física del personaje 2.",
+      "personality": "Personalidad del personaje 2.",
+      "backstory": "Pasado del personaje 2.",
+      "personalPlot": "Lo que le ocurre al personaje 2 a lo largo del libro.",
+      "arcSummary": "Cómo cambia por dentro el personaje 2.",
+      "notes": "Notas del personaje 2.",
+      "arcStages": [
+        { "title": "Etapa 1", "description": "Situación inicial del personaje 2." },
+        { "title": "Etapa 2", "description": "Situación final del personaje 2." }
+      ],
+      "relationships": [
+        { "relatedCharacterId": "p1", "type": "mentor", "description": "El personaje 2 ve al personaje 1 como alguien a quien guiar." }
+      ]
+    },
+    {
+      "id": "p3",
+      "name": "Personaje 3",
+      "role": "ANTAGONIST",
+      "age": "desconocida",
+      "physicalDescription": "Descripción física del personaje 3.",
+      "personality": "Personalidad del personaje 3.",
+      "backstory": "Pasado del personaje 3.",
+      "personalPlot": "Lo que le ocurre al personaje 3 a lo largo del libro.",
+      "arcSummary": "El personaje 3 no cambia: sigue igual al final.",
+      "notes": "Notas del personaje 3.",
+      "arcStages": [],
+      "relationships": [
+        { "relatedCharacterId": "p1", "type": "estorbo", "description": "El personaje 3 ve al personaje 1 como un obstáculo." }
+      ]
+    }
+  ],
+  "chapters": [
+    {
+      "id": "c1",
+      "title": "Capítulo 1",
+      "synopsis": "Sinopsis del capítulo 1. Se presentan los personajes y se abren las primeras promesas.",
+      "notes": "Notas del capítulo 1.",
+      "textALabel": "Borrador",
+      "textBLabel": "Reescritura",
+      "textA": "Texto de ejemplo del capítulo 1 (borrador).",
+      "textB": null,
+      "cast": [
+        { "characterId": "p1", "action": "Encuentra la carta sin abrir." },
+        { "characterId": "p2", "action": "Menciona una deuda antigua." },
+        { "characterId": "p3", "action": "Aparece de lejos, sin presentarse." }
+      ]
+    },
+    {
+      "id": "c2",
+      "title": "Capítulo 2",
+      "synopsis": "Sinopsis del capítulo 2. Se cierra una promesa del capítulo 1 y se abre otra nueva.",
+      "notes": "Notas del capítulo 2.",
+      "textALabel": "Borrador",
+      "textBLabel": "Reescritura",
+      "textA": "Texto de ejemplo del capítulo 2 (borrador).",
+      "textB": null,
+      "cast": [
+        { "characterId": "p1", "action": "Abre la carta y descubre su contenido." },
+        { "characterId": "p3", "action": "Se presenta y amenaza al personaje 1." }
+      ]
+    },
+    {
+      "id": "c3",
+      "title": "Capítulo 3",
+      "synopsis": "Sinopsis del capítulo 3. Se cierran las promesas pendientes.",
+      "notes": "Notas del capítulo 3.",
+      "textALabel": "Borrador",
+      "textBLabel": "Reescritura",
+      "textA": "Texto de ejemplo del capítulo 3 (borrador).",
+      "textB": null,
+      "cast": [
+        { "characterId": "p1", "action": "Se enfrenta al personaje 3." },
+        { "characterId": "p2", "action": "Salda la deuda antigua." },
+        { "characterId": "p3", "action": "Revela quién es en realidad." }
+      ]
+    }
+  ],
+  "plot": {
+    "events": [
+      { "id": "e1", "title": "Capítulo 1 — El personaje 1 encuentra una carta", "description": "La guarda sin abrirla." },
+      { "id": "e2", "title": "Capítulo 1 — El personaje 2 menciona una deuda", "description": "No explica con quién ni por qué." },
+      { "id": "e3", "title": "Capítulo 1 — Un desconocido observa desde lejos", "description": "Es el personaje 3, aunque aún no se sabe." },
+      { "id": "e4", "title": "Capítulo 2 — El personaje 1 abre la carta", "description": "La carta advierte sobre el personaje 3." },
+      { "id": "e5", "title": "Capítulo 2 — El personaje 3 amenaza al personaje 1", "description": "Le da un plazo que vence en el capítulo 3." },
+      { "id": "e6", "title": "Capítulo 3 — El personaje 2 salda la deuda", "description": "Se descubre que la deuda era con el personaje 3." },
+      { "id": "e7", "title": "Capítulo 3 — Enfrentamiento final", "description": "El personaje 1 se enfrenta al personaje 3 y el plazo se cumple." },
+      { "id": "e8", "title": "Capítulo 3 — El personaje 3 menciona una segunda carta", "description": "Queda abierto para una posible continuación." }
+    ],
+    "promises": [
+      {
+        "title": "¿Qué dice la carta?",
+        "description": "Se abre en el capítulo 1 y se cierra en el capítulo 2.",
+        "setupEventId": "e1",
+        "payoffEventId": "e4"
+      },
+      {
+        "title": "¿Quién es el desconocido?",
+        "description": "Se abre en el capítulo 1 y se cierra en el capítulo 2.",
+        "setupEventId": "e3",
+        "payoffEventId": "e5"
+      },
+      {
+        "title": "La deuda del personaje 2",
+        "description": "Se abre en el capítulo 1 y se cierra en el capítulo 3.",
+        "setupEventId": "e2",
+        "payoffEventId": "e6"
+      },
+      {
+        "title": "El plazo de la amenaza",
+        "description": "Se abre en el capítulo 2 y se cierra en el capítulo 3.",
+        "setupEventId": "e5",
+        "payoffEventId": "e7"
+      },
+      {
+        "title": "La segunda carta",
+        "description": "Se abre en el capítulo 3 y queda pendiente, sin cerrar.",
+        "setupEventId": "e8",
+        "payoffEventId": null
+      }
+    ]
+  }
+}

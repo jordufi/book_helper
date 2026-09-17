@@ -22,6 +22,8 @@ import { useCreateBook, useDeleteBook, useImportBook, useUpdateBook } from '../d
 import { exportBook } from '../db/transfer';
 import { useActiveBook } from '../state/useActiveBook';
 import { useT } from '../state/useSettings';
+import { useWalkthrough } from '../state/useWalkthrough';
+import { useExitConfirm } from '../lib/useExitConfirm';
 import type { Book } from '../types';
 
 /** Nombre de fichero a partir del título: sin acentos, minúsculas, con guiones. */
@@ -109,6 +111,13 @@ export function BooksScreen() {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Book | null>(null);
   const [transferError, setTransferError] = useState<unknown>(null);
+
+  // Ésta es la pantalla de inicio: el atrás de Android sale de la app desde
+  // aquí, así que se confirma antes. Se desactiva mientras hay un Modal
+  // encima (formulario de libro o tutorial), donde el atrás debe cerrar ese
+  // modal y no preguntar por la salida.
+  const walkthrough = useWalkthrough();
+  useExitConfirm(!creating && editing === null && !walkthrough.visible);
 
   const handleExport = async (book: Book) => {
     setTransferError(null);

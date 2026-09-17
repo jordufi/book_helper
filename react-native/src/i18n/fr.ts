@@ -258,6 +258,55 @@ export const fr: Dict = {
     languageEs: 'Español',
     languageEn: 'English',
     languageFr: 'Français',
+    aboutLabel: 'À propos de l’application',
+    rateApp: 'Noter l’application',
+    privacyPolicy: 'Voir la politique de confidentialité et les conditions d’utilisation',
+    showWalkthrough: 'Revoir le tutoriel',
+    linkErrorTitle: 'Impossible d’ouvrir le lien',
+    linkErrorBody: (url: string) => `Ouvrez-le à la main dans le navigateur :\n\n${url}`,
+  },
+
+  walkthrough: {
+    title: 'Comment fonctionne Story Planner',
+    stepOf: (current: number, total: number) => `Étape ${current} sur ${total}`,
+    back: 'Retour',
+    next: 'Suivant',
+    done: 'Commencer',
+    dontShowAgain: 'Ne plus afficher',
+    steps: [
+      {
+        icon: '📚',
+        title: 'Commencez par un livre',
+        body: 'Tout dépend d’un livre : créez-le dans l’onglet Livres avec son titre, son auteur et son synopsis. Le livre choisi là est celui que montrent les autres onglets.',
+      },
+      {
+        icon: '🧵',
+        title: 'Organisez l’intrigue',
+        body: 'Dans Intrigue, vous placez les événements clés dans l’ordre où ils surviennent et notez les promesses faites au lecteur : ce qui est posé et dans quel événement cela se résout.',
+      },
+      {
+        icon: '👥',
+        title: 'Façonnez vos personnages',
+        body: 'Chaque personnage a un rôle, un physique, une personnalité, un passé, un arc en étapes et des relations avec les autres. L’intrigue est ce qui lui arrive ; l’arc, la façon dont il change intérieurement.',
+      },
+      {
+        icon: '📖',
+        title: 'Planifiez les chapitres',
+        body: 'Ordonnez les chapitres, attribuez à chacun sa distribution et écrivez dans deux panneaux de texte indépendants : un brouillon et sa révision, par exemple.',
+      },
+      {
+        icon: '💾',
+        title: 'Vos données restent les vôtres',
+        body: 'Tout est enregistré sur cet appareil, sans compte ni connexion. Depuis Livres, vous pouvez exporter n’importe quel livre en fichier JSON pour le sauvegarder ou le transférer.',
+      },
+    ],
+  },
+
+  exit: {
+    title: 'Quitter Story Planner',
+    message: 'Voulez-vous fermer l’application ?',
+    confirm: 'Quitter',
+    cancel: 'Rester ici',
   },
 
   app: {

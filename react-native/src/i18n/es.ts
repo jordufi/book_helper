@@ -251,6 +251,55 @@ export const es = {
     languageEs: 'Español',
     languageEn: 'English',
     languageFr: 'Français',
+    aboutLabel: 'Sobre la aplicación',
+    rateApp: 'Valorar la aplicación',
+    privacyPolicy: 'Ver la política de privacidad y las condiciones de uso',
+    showWalkthrough: 'Ver el tutorial otra vez',
+    linkErrorTitle: 'No se pudo abrir el enlace',
+    linkErrorBody: (url: string) => `Ábrelo a mano en el navegador:\n\n${url}`,
+  },
+
+  walkthrough: {
+    title: 'Cómo funciona Story Planner',
+    stepOf: (current: number, total: number) => `Paso ${current} de ${total}`,
+    back: 'Atrás',
+    next: 'Siguiente',
+    done: 'Empezar',
+    dontShowAgain: 'No mostrar de nuevo',
+    steps: [
+      {
+        icon: '📚',
+        title: 'Empieza por un libro',
+        body: 'Todo cuelga de un libro: créalo en la pestaña Libros con su título, autor y sinopsis. El libro que elijas ahí es el que verán las demás pestañas.',
+      },
+      {
+        icon: '🧵',
+        title: 'Ordena la trama',
+        body: 'En Trama colocas los sucesos clave en el orden en que ocurren y anotas las promesas que le haces al lector: qué se plantea y en qué suceso se resuelve.',
+      },
+      {
+        icon: '👥',
+        title: 'Da forma a los personajes',
+        body: 'Cada personaje tiene rol, físico, personalidad, trasfondo, su arco por etapas y las relaciones con los demás. La trama es lo que le pasa; el arco, cómo cambia por dentro.',
+      },
+      {
+        icon: '📖',
+        title: 'Planifica los capítulos',
+        body: 'Ordena los capítulos, asigna a cada uno su reparto y escribe en dos paneles de texto independientes: por ejemplo un borrador y su revisión.',
+      },
+      {
+        icon: '💾',
+        title: 'Tus datos son tuyos',
+        body: 'Todo se guarda en este dispositivo, sin cuenta ni conexión. Desde Libros puedes exportar cualquier libro como fichero JSON para tener una copia o pasarlo a otro dispositivo.',
+      },
+    ],
+  },
+
+  exit: {
+    title: 'Salir de Story Planner',
+    message: '¿Quieres cerrar la aplicación?',
+    confirm: 'Salir',
+    cancel: 'Seguir aquí',
   },
 
   app: {

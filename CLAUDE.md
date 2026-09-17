@@ -441,6 +441,42 @@ dispositivo. Decisiones propias que conviene no deshacer:
   filtro estricto sale en gris y no se puede elegir el propio export. No relaja
   ninguna validación — lo que valida de verdad es el `JSON.parse` y el schema
   de zod de `transferSchema.ts`.
+- **El tutorial de bienvenida se pinta en `App.tsx`, fuera de
+  `NavigationContainer`** (`src/ui/Walkthrough.tsx` + `src/state/useWalkthrough.tsx`).
+  Tiene que salir en el primer arranque, cuando todavía no hay ningún libro y
+  ninguna pestaña tiene nada que enseñar, así que no puede colgar de una
+  pantalla concreta. Su `seen` empieza en `null` ("aún no sabemos"), no en
+  `false`: con `false` el tutorial parpadearía medio segundo en cada arranque a
+  quien ya lo descartó, mientras se lee el kv-store. Y **sólo "No mostrar de
+  nuevo" escribe el flag**: cerrar con la ✕ o llegar al final lo oculta esta
+  vez y vuelve a salir al siguiente arranque — es lo que se pidió. "Ver el
+  tutorial otra vez" (Ajustes) lo abre sin tocar el flag, por eso el estado
+  vive en un Context y no en un `useState` de la pantalla.
+- **La confirmación de salida (`useExitConfirm`) va sólo en `BooksScreen` y
+  dentro de `useFocusEffect`.** Es la única pantalla desde la que el atrás de
+  Android cierra la app: en las demás pestañas React Navigation lo usa para
+  volver aquí, y en las fichas para volver a su lista, así que un listener
+  global preguntaría "¿salir?" en sitios donde el atrás no sale de nada. Va en
+  `useFocusEffect` y no en un `useEffect` porque las pestañas **no se
+  desmontan** al cambiar de una a otra (ver el punto del Context del libro
+  activo): con `useEffect` el listener seguiría vivo desde otra pestaña. Se
+  desactiva mientras hay un `Modal` encima (formulario de libro, tutorial),
+  donde el atrás debe cerrar ese modal.
+- **`src/lib/links.ts` centraliza el nombre del paquete.** Se repite en la URL
+  `market://` y en la `https` de la ficha; equivocarse en una letra manda al
+  usuario a una ficha inexistente sin que nada falle de forma visible. La
+  ficha se intenta abrir primero con `market://` (abre la app de Play Store
+  directamente en el diálogo de valoración) y cae a la URL web si no hay Play
+  Store — el error se enseña con la URL `https`, nunca con el `market://`, que
+  no se puede pegar en un navegador. El enlace legal apunta al `PRIVACY.md`
+  del repositorio, que es **el mismo** que se declara en Play Console y que
+  ahora contiene además las condiciones de uso.
+- **El texto de la ficha de Google Play vive en
+  [react-native/STORE_LISTING.md](react-native/STORE_LISTING.md)**, en los tres
+  idiomas, con las cuentas de caracteres de cada campo. Está en el repositorio
+  y no sólo en Play Console porque responde punto por punto a un informe ASO
+  concreto; ahí también queda escrito lo único de ese informe que **no** se
+  aplica y por qué (testimonios inventados = reseña falsa).
 - **Migraciones por `PRAGMA user_version`** (`src/db/schema.ts`). Para cambiar
   el esquema se añade una entrada al final de `MIGRATIONS`; **nunca** se edita
   una ya publicada, porque los dispositivos que la aplicaron no la repetirán.

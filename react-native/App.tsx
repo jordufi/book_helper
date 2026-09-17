@@ -10,9 +10,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { getDb } from './src/db/database';
 import { ActiveBookProvider } from './src/state/useActiveBook';
 import { SettingsProvider, useT, useThemeScheme } from './src/state/useSettings';
+import { WalkthroughProvider } from './src/state/useWalkthrough';
 import type { CharactersStackParams, ChaptersStackParams } from './src/navigation';
 import { useTheme } from './src/ui/theme';
 import { ErrorBanner, Spinner } from './src/ui/components';
+import { Walkthrough } from './src/ui/Walkthrough';
 import { BooksScreen } from './src/screens/BooksScreen';
 import { PlotScreen } from './src/screens/PlotScreen';
 import { CharactersScreen } from './src/screens/CharactersScreen';
@@ -207,6 +209,10 @@ function AppShell() {
           </Tabs.Navigator>
         </NavigationContainer>
       </ActiveBookProvider>
+      {/* Fuera de NavigationContainer y por encima de todo: el tutorial sale
+          también en el primer arranque, cuando todavía no hay ningún libro y
+          ninguna pestaña tiene nada que enseñar. */}
+      <Walkthrough />
       <StatusBar style="auto" />
     </QueryClientProvider>
   );
@@ -216,7 +222,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <SettingsProvider>
-        <AppShell />
+        <WalkthroughProvider>
+          <AppShell />
+        </WalkthroughProvider>
       </SettingsProvider>
     </SafeAreaProvider>
   );
