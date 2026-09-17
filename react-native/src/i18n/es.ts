@@ -260,7 +260,7 @@ export const es = {
   },
 
   walkthrough: {
-    title: 'Cómo funciona Story Planner',
+    title: 'Cómo funciona Taledesk',
     stepOf: (current: number, total: number) => `Paso ${current} de ${total}`,
     back: 'Atrás',
     next: 'Siguiente',
@@ -296,7 +296,7 @@ export const es = {
   },
 
   exit: {
-    title: 'Salir de Story Planner',
+    title: 'Salir de Taledesk',
     message: '¿Quieres cerrar la aplicación?',
     confirm: 'Salir',
     cancel: 'Seguir aquí',

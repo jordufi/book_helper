@@ -1,4 +1,4 @@
-# Ficha de Google Play — Story Planner
+# Ficha de Google Play — Taledesk
 
 Texto listo para pegar en Play Console, en los tres idiomas de la app. Cada
 locale es una ficha independiente en Play (Grow users → Store presence → Main
@@ -23,13 +23,13 @@ reales, Play ya las muestra bajo la ficha.
 
 ## Español
 
-### Título (22 / 30)
+### Título (17 / 30)
 
 ```
-Story Planner: Novelas
+Taledesk: Novelas
 ```
 
-> Nota: el título es lo único que no se traduce del todo. "Story Planner" es la
+> Nota: el título es lo único que no se traduce del todo. "Taledesk" es la
 > marca y "Novelas" es el descriptor que capta las búsquedas en español; el
 > nombre completo de la clave ("planificador de novelas") no cabe en 30
 > caracteres junto a la marca.
@@ -43,7 +43,7 @@ Planifica tu novela sin conexión: trama, personajes y capítulos, paso a paso.
 ### Descripción larga
 
 ```
-Story Planner es un planificador de novelas sencillo y práctico para diseñar tu historia antes de escribirla, y funciona sin conexión a internet.
+Taledesk es un planificador de novelas sencillo y práctico para diseñar tu historia antes de escribirla, y funciona sin conexión a internet.
 
 Todo lo que necesitas para dar forma a una novela está en un solo lugar: la trama, los personajes y los capítulos. Sin cuenta, sin registro y sin que tus ideas salgan del teléfono.
 
@@ -61,7 +61,7 @@ PARA QUIÉN ES
 
 Para quien escribe ficción y prefiere llegar al primer borrador con la estructura ya pensada. Sirve igual para esbozar una primera novela corta que para llevar el control de una saga con muchos personajes y varias tramas abiertas a la vez, y también para preparar un relato largo, un guion o una partida de rol antes de sentarse a escribir.
 
-POR QUÉ STORY PLANNER
+POR QUÉ TALEDESK
 
 • Funciona completamente sin conexión. Todos tus datos se guardan en tu propio dispositivo, en una base de datos local; nunca se sube nada a ningún servidor.
 
@@ -79,19 +79,19 @@ Crea un libro con su título, su autor y su sinopsis; ese libro es el que verán
 
 PRIVACIDAD
 
-No recogemos ningún dato. Story Planner no tiene servidor ni se conecta a internet, así que lo que escribes sólo existe en tu teléfono y sólo sale de él si tú decides exportarlo. Puedes leer la política de privacidad y las condiciones de uso desde la propia pantalla de Ajustes.
+No recogemos ningún dato. Taledesk no tiene servidor ni se conecta a internet, así que lo que escribes sólo existe en tu teléfono y sólo sale de él si tú decides exportarlo. Puedes leer la política de privacidad y las condiciones de uso desde la propia pantalla de Ajustes.
 
-Si buscas un planificador de novelas que respete tu tiempo y tus datos, y que te deje ordenar las piezas antes de escribir la primera frase, Story Planner es para ti.
+Si buscas un planificador de novelas que respete tu tiempo y tus datos, y que te deje ordenar las piezas antes de escribir la primera frase, Taledesk es para ti.
 ```
 
 ---
 
 ## English
 
-### Title (28 / 30)
+### Title (23 / 30)
 
 ```
-Story Planner: Novel Planner
+Taledesk: Novel Planner
 ```
 
 ### Descripción corta / Short description (75 / 80)
@@ -103,7 +103,7 @@ Plan your novel offline: a novel planner for plot, characters and chapters.
 ### Full description
 
 ```
-Story Planner is a simple, practical novel planner for designing your story before you write it, and it works entirely offline.
+Taledesk is a simple, practical novel planner for designing your story before you write it, and it works entirely offline.
 
 Everything you need to shape a novel lives in one place: the plot, the characters and the chapters. No account, no sign-up, and nothing you write ever leaves your phone.
 
@@ -121,7 +121,7 @@ WHO IT IS FOR
 
 For anyone who writes fiction and would rather reach the first draft with the structure already worked out. It suits a first short novel as well as a long series with a large cast and several open storylines, and it works just as well for planning a long short story, a screenplay or a tabletop campaign before you start writing.
 
-WHY STORY PLANNER
+WHY TALEDESK
 
 • Works completely offline. All your data is stored on your own device in a local database; nothing is ever uploaded to a server.
 
@@ -141,19 +141,19 @@ Create a book with its title, author and synopsis; that book is the one the othe
 
 PRIVACY
 
-We collect nothing. Story Planner has no server and does not connect to the internet, so what you write exists only on your phone and leaves it only if you choose to export it. The privacy policy and terms of service are linked from the Settings screen inside the app.
+We collect nothing. Taledesk has no server and does not connect to the internet, so what you write exists only on your phone and leaves it only if you choose to export it. The privacy policy and terms of service are linked from the Settings screen inside the app.
 
-If you want a novel planner that respects your time and your data, and lets you arrange the pieces before writing the first sentence, Story Planner is for you.
+If you want a novel planner that respects your time and your data, and lets you arrange the pieces before writing the first sentence, Taledesk is for you.
 ```
 
 ---
 
 ## Français
 
-### Titre (29 / 30)
+### Titre (24 / 30)
 
 ```
-Story Planner : plan de roman
+Taledesk : plan de roman
 ```
 
 ### Description courte (70 / 80)
@@ -165,7 +165,7 @@ Planifiez votre roman hors ligne : intrigue, personnages et chapitres.
 ### Description complète
 
 ```
-Story Planner est un planificateur de romans simple et pratique pour concevoir votre histoire avant de l'écrire, et il fonctionne entièrement hors ligne.
+Taledesk est un planificateur de romans simple et pratique pour concevoir votre histoire avant de l'écrire, et il fonctionne entièrement hors ligne.
 
 Tout ce qu'il faut pour donner forme à un roman se trouve au même endroit : l'intrigue, les personnages et les chapitres. Sans compte, sans inscription, et sans que vos idées quittent votre téléphone.
 
@@ -183,7 +183,7 @@ POUR QUI
 
 Pour celles et ceux qui écrivent de la fiction et préfèrent arriver au premier jet avec la structure déjà en place. Cela convient aussi bien à un premier roman court qu'à une longue saga avec de nombreux personnages et plusieurs intrigues ouvertes, et tout autant à la préparation d'une nouvelle longue, d'un scénario ou d'une partie de jeu de rôle.
 
-POURQUOI STORY PLANNER
+POURQUOI TALEDESK
 
 • Fonctionne totalement hors ligne. Toutes vos données sont enregistrées sur votre appareil, dans une base de données locale ; rien n'est jamais envoyé sur un serveur.
 
@@ -201,9 +201,9 @@ Créez un livre avec son titre, son auteur et son synopsis ; c'est ce livre que 
 
 CONFIDENTIALITÉ
 
-Nous ne collectons aucune donnée. Story Planner n'a pas de serveur et ne se connecte pas à internet : ce que vous écrivez n'existe que sur votre téléphone et n'en sort que si vous choisissez de l'exporter. La politique de confidentialité et les conditions d'utilisation sont accessibles depuis l'écran Réglages de l'application.
+Nous ne collectons aucune donnée. Taledesk n'a pas de serveur et ne se connecte pas à internet : ce que vous écrivez n'existe que sur votre téléphone et n'en sort que si vous choisissez de l'exporter. La politique de confidentialité et les conditions d'utilisation sont accessibles depuis l'écran Réglages de l'application.
 
-Si vous cherchez un planificateur de romans qui respecte votre temps et vos données, et qui vous laisse ordonner les pièces avant d'écrire la première phrase, Story Planner est fait pour vous.
+Si vous cherchez un planificateur de romans qui respecte votre temps et vos données, et qui vous laisse ordonner les pièces avant d'écrire la première phrase, Taledesk est fait pour vous.
 ```
 
 ---

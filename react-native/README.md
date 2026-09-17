@@ -1,4 +1,4 @@
-# Story Planner — móvil (Android / iOS)
+# Taledesk — móvil (Android / iOS)
 
 La misma app de diseñar novelas, pero **sin servidor**: los datos viven en una
 SQLite dentro del propio teléfono. No hay API, ni Postgres, ni red. Se puede

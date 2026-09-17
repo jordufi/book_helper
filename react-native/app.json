@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Story Planner",
-    "slug": "story-planner",
+    "name": "Taledesk",
+    "slug": "taledesk",
     "version": "0.2.1",
     "orientation": "default",
     "icon": "./assets/icon.png",
-    "scheme": "storyplanner",
+    "scheme": "taledesk",
     "userInterfaceStyle": "automatic",
     "assetBundlePatterns": [
       "**/*"

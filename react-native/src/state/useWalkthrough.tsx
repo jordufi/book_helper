@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Storage from 'expo-sqlite/kv-store';
 
-const SEEN_KEY = 'story-planner:tutorial-visto';
+const SEEN_KEY = 'taledesk:tutorial-visto';
 
 interface WalkthroughValue {
   /** Si el tutorial debe estar en pantalla ahora mismo. */

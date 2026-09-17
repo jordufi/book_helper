@@ -3,8 +3,8 @@ import { useColorScheme } from 'react-native';
 import Storage from 'expo-sqlite/kv-store';
 import { dictionaries, type Dict, type Locale } from '../i18n';
 
-const LOCALE_KEY = 'story-planner:idioma';
-const THEME_KEY = 'story-planner:tema';
+const LOCALE_KEY = 'taledesk:idioma';
+const THEME_KEY = 'taledesk:tema';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 

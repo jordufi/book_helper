@@ -267,7 +267,7 @@ export const fr: Dict = {
   },
 
   walkthrough: {
-    title: 'Comment fonctionne Story Planner',
+    title: 'Comment fonctionne Taledesk',
     stepOf: (current: number, total: number) => `Étape ${current} sur ${total}`,
     back: 'Retour',
     next: 'Suivant',
@@ -303,7 +303,7 @@ export const fr: Dict = {
   },
 
   exit: {
-    title: 'Quitter Story Planner',
+    title: 'Quitter Taledesk',
     message: 'Voulez-vous fermer l’application ?',
     confirm: 'Quitter',
     cancel: 'Rester ici',
